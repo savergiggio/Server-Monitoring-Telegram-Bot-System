@@ -1,0 +1,469 @@
+/* CSS personalizzato */
+.card {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.form-switch .form-check-input {
+    width: 3em;
+    height: 1.5em;
+}
+
+.form-check-label {
+    padding-left: 0.5em;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.text-success {
+    color: #198754 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.alert {
+    margin-top: 1rem;
+    border-radius: 8px;
+}
+
+.btn {
+    border-radius: 6px;
+}
+
+/* Animazione per il messaggio di stato */
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Stili per le carte delle metriche */
+.metric-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    height: 100%;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.metric-value.warning {
+    color: #fd7e14;
+}
+
+.metric-value.danger {
+    color: #dc3545;
+}
+
+.metric-value.success {
+    color: #198754;
+}
+
+/* Stili per le configurazioni di monitoraggio */
+.monitoring-config {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.monitoring-config:last-child {
+    margin-bottom: 0;
+}
+
+.monitoring-config.disabled {
+    opacity: 0.6;
+    background: #f8f9fa;
+}
+
+/* Responsive per le card delle metriche */
+@media (max-width: 768px) {
+    .metric-card {
+        margin-bottom: 1rem;
+    }
+    
+    .row > .col-md-3 {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* ========== THEME TOGGLE ========== */
+
+/* Style per il toggle del tema */
+.theme-toggle {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-left: 1rem;
+}
+
+.theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.theme-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+/* ========== DARK THEME ========== */
+
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* Body e background principale */
+[data-theme="dark"] body {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+/* Container principale */
+[data-theme="dark"] .container {
+    color: #e0e0e0;
+}
+
+/* Card styling */
+[data-theme="dark"] .card {
+    background-color: #1e1e1e;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .card-header {
+    background-color: #2d2d2d;
+    border-bottom-color: #333;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .card-body {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+/* Tabs */
+[data-theme="dark"] .nav-tabs {
+    border-bottom-color: #333;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link {
+    color: #fff !important;
+    border-color: transparent;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.text-dark {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+    color: #fff;
+    background-color: #2d2d2d;
+    border-color: #333 #333 transparent;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+    color: #fff;
+    background-color: #1e1e1e;
+    border-color: #333 #333 #1e1e1e;
+}
+
+/* Form controls */
+[data-theme="dark"] .form-control {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-control:focus {
+    background-color: #2d2d2d;
+    border-color: #0d6efd;
+    color: #e0e0e0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: #888;
+}
+
+[data-theme="dark"] .form-select {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e0e0e0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
+}
+
+[data-theme="dark"] .form-select:focus {
+    background-color: #2d2d2d;
+    border-color: #0d6efd;
+    color: #e0e0e0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Labels e testi */
+[data-theme="dark"] .form-label {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-text {
+    color: #b0b0b0;
+}
+
+/* Switch controls */
+[data-theme="dark"] .form-check-input {
+    background-color: #444;
+    border-color: #666;
+}
+
+[data-theme="dark"] .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+[data-theme="dark"] .form-check-label {
+    color: #e0e0e0;
+}
+
+/* Buttons */
+[data-theme="dark"] .btn-outline-secondary {
+    color: #b0b0b0;
+    border-color: #666;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+    color: #000;
+    background-color: #b0b0b0;
+    border-color: #b0b0b0;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Input groups */
+[data-theme="dark"] .input-group-text {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+/* Alerts */
+[data-theme="dark"] .alert-info {
+    background-color: #1a2332;
+    border-color: #0d6efd;
+    color: #9ec5fe;
+}
+
+[data-theme="dark"] .alert-success {
+    background-color: #1a2e1a;
+    border-color: #198754;
+    color: #75b798;
+}
+
+[data-theme="dark"] .alert-warning {
+    background-color: #332b1a;
+    border-color: #fd7e14;
+    color: #ffb366;
+}
+
+[data-theme="dark"] .alert-danger {
+    background-color: #2e1a1a;
+    border-color: #dc3545;
+    color: #f1959b;
+}
+
+/* Metric cards */
+[data-theme="dark"] .metric-card {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .metric-title {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .metric-value {
+    color: #e0e0e0;
+}
+
+/* Monitoring config */
+[data-theme="dark"] .monitoring-config {
+    background-color: #2d2d2d;
+    border-color: #444;
+}
+
+[data-theme="dark"] .monitoring-config.disabled {
+    background-color: #1a1a1a;
+    opacity: 0.7;
+}
+
+/* Small text e muted */
+[data-theme="dark"] .text-muted {
+    color: #888 !important;
+}
+
+[data-theme="dark"] small {
+    color: #b0b0b0;
+}
+
+/* Badge */
+[data-theme="dark"] .badge {
+    color: #000;
+}
+
+[data-theme="dark"] .badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+/* Border utilities */
+[data-theme="dark"] .border {
+    border-color: #444 !important;
+}
+
+/* Tables (se presenti) */
+[data-theme="dark"] .table {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .table-bordered {
+    border-color: #444;
+}
+
+[data-theme="dark"] .table-bordered td,
+[data-theme="dark"] .table-bordered th {
+    border-color: #444;
+}
+
+/* Scrollbar styling per dark theme */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+/* Links */
+[data-theme="dark"] a {
+    color: #6ea8fe;
+}
+
+[data-theme="dark"] a:hover {
+    color: #9ec5fe;
+}
+
+/* HR */
+[data-theme="dark"] hr {
+    border-color: #444;
+}
+
+/* Prevenire flash of unstyled content durante il cambio tema */
+html {
+    transition: background-color 0.3s ease;
+}
+
+/* Transition per cambio tema smooth */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Fix per il selettore lingua nel tema dark */
+[data-theme="dark"] #languageSelector {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] #languageSelector option {
+    background-color: #2d2d2d;
+    color: #fff;
+}
+
+/* Override della classe text-dark nel tema dark */
+[data-theme="dark"] .text-dark {
+    color: #fff !important;
+}
+
+/* List group styling per tema dark */
+[data-theme="dark"] .list-group {
+    background-color: #1e1e1e;
+}
+
+[data-theme="dark"] .list-group-item {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .list-group-item:hover {
+    background-color: #3a3a3a;
+}
+
+/* Card header bg-light nel tema dark */
+[data-theme="dark"] .card-header.bg-light {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0;
+}
