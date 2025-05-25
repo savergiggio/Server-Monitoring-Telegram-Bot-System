@@ -34,7 +34,7 @@ Server Monitoring Telegram Bot System è un'applicazione web che permette di mon
 
 ### Prerequisiti
 - Docker e Docker Compose installati sul sistema
-- Token e ChatID Bot Telegram (creato tramite @BotFather (token) & @myidbot(chatid))
+- Token e ChatID Bot Telegram (creato tramite @BotFather (token) & @myidbot (chatid))
 - Il token del bot e l'ID della chat Telegram dove ricevere le notifiche
 
 ### Installazione con Docker Compose
