@@ -45,12 +45,17 @@ git clone https://github.com/tuouser/server-monitoring-telegram-bot.git
 cd server-monitoring-telegram-bot
 ```
 
-2. Avvia il container:
+2. Build del container:
 ```bash
-docker-compose up -d
+sudo docker-compose build
 ```
 
-3. Accedi all'interfaccia web:
+3. Avvia il container:
+```bash
+sudo docker-compose up -d
+```
+
+4. Accedi all'interfaccia web:
 ```
 http://tuo_ip:8082
 ```
