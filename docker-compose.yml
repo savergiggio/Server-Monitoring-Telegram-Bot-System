@@ -11,7 +11,7 @@ services:
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       - CHECK_INTERVAL=${CHECK_INTERVAL:-10}
       - HOSTNAME=${HOSTNAME:-server}
-      - LOCAL_IP=SET_LOCAL_IP #SETYOURIP
+      - LOCAL_IP=192.168.178.8 #SETYOURIP
       - LOG_TO_STDOUT=true
       - TZ=Europe/Rome
     volumes:
