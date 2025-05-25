@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  ssh-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ssh-monitor
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - CHECK_INTERVAL=${CHECK_INTERVAL:-10}
+      - HOSTNAME=${HOSTNAME:-server}
+      - LOCAL_IP=192.168.178.8
+      - LOG_TO_STDOUT=true
+      - TZ=Europe/Rome
+    volumes:
+      - ./config:/etc/ssh_monitor
+      - ./data:/var/lib/ssh_monitor
+      - /var/log:/var/log
+      - /tmp:/tmp:ro
+      - /home:/home:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/loki/plex:/home/loki/plex
+      - /home/loki/nexty:/home/loki/nexty:ro
+    ports:
+      - "8082:5000"
+    cap_add:
+      - NET_ADMIN  # Aggiunto per consentire l'accesso a informazioni di rete
+    privileged: true
+    restart: unless-stopped
