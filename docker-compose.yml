@@ -21,10 +21,15 @@ services:
       - /tmp:/tmp:ro
       - /home:/home:ro
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/loki/plex:/home/loki/plex
-      - /home/loki/nexty:/home/loki/nexty:ro
+      #Uploads Mounts examples
+      - /home/user/folder1:/home/user/folder1
+      - /home/user/folder2:/home/user/folder2
+      #Downloads Mounts examples
+      - /home/user/folder3:/home/user/folder3:ro
+      - /home/user/folder4:/home/user/folder4:ro
+      
     ports:
-      - "8082:5000"
+      - "8082:5000" #Change Port if Already in use
     cap_add:
       - NET_ADMIN  # Aggiunto per consentire l'accesso a informazioni di rete
     privileged: true
