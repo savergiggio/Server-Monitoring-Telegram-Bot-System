@@ -7,47 +7,6 @@
 Telegram Server Monitor è un'applicazione completamente containerizzata che fornisce una GUI web e un bot Telegram per monitorare e gestire il tuo server Linux. Fornisce notifiche in tempo reale su accessi SSH/SFTP, utilizzo delle risorse di sistema, connettività internet e gestione dei container Docker. La soluzione consente sia il monitoraggio che il controllo remoto direttamente dal browser o da Telegram.
 
 ---
-## 🛠️ Requisiti
-
-- Docker e Docker Compose installati su un server Linux (Debian/Ubuntu consigliati).
-- Token del Bot Telegram (creane uno tramite [@BotFather](https://t.me/BotFather)).
-- ChatID Telegram (ottienilo da [@myidbot](https://t.me/IDBot))
----  
-## 📦 Installazione
-
-1. **Clona il repository:**:
-   ```bash
-   git clone https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System.git
-   cd Server-Monitoring-Telegram-Bot-System
-
-2. **Modifica docker-compose.yml prima di eseguire (altamente consigliato):**:
-   
-     - *Monta le tue directory locali da usare come punti di mount nell'app, per upload/download file:*
-     - *Cambia il mapping della porta predefinita (es. 8082:5000) se necessario per evitare conflitti.*
-     - *Imposta il tuo fuso orario nelle variabili d'ambiente:*
-     - *Specifica il tuo IP locale nella configurazione o nell’ambiente, se richiesto per la comunicazione del bot.*
-   
-   ```bash
-   
-    volumes:
-    #UPLOADS
-       - /home/user/folder1_upload:/home/user/folder1_upload
-    #DOWNLOADS
-       - /home/user/folder2_download:/home/user/folder2_download
-    environment:
-       - TZ=Europe/Rome
-       - LOCAL_IP=YOURLOCALIP
-   
-3. **Build e avvia l'app con Docker Compose:**:
-   ```bash
-   sudo docker-compose build
-   sudo docker-compose up -d
-4. **Accedi alla GUI Web nel tuo browser all’indirizzo:**:
-   ```bash
-   http://localhost:8082 (or your configured IP and port)
-
-
----
 ## 🌐 Funzionalità dell'interfaccia Web
 
 La GUI è organizzata in schede per una gestione semplice e chiara:
@@ -103,3 +62,44 @@ Carica e scarica file da/sul server tramite i punti di mount configurati, utiliz
 
 ### 🔁 Controllo del Server  
 Riavvia il tuo server utilizzando un comando dedicato del bot.
+
+---
+## 🛠️ Requisiti
+
+- Docker e Docker Compose installati su un server Linux (Debian/Ubuntu consigliati).
+- Token del Bot Telegram (creane uno tramite [@BotFather](https://t.me/BotFather)).
+- ChatID Telegram (ottienilo da [@myidbot](https://t.me/IDBot))
+---  
+## 📦 Installazione
+
+1. **Clona il repository:**:
+   ```bash
+   git clone https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System.git
+   cd Server-Monitoring-Telegram-Bot-System
+
+2. **Modifica docker-compose.yml prima di eseguire (altamente consigliato):**:
+   
+     - *Monta le tue directory locali da usare come punti di mount nell'app, per upload/download file:*
+     - *Cambia il mapping della porta predefinita (es. 8082:5000) se necessario per evitare conflitti.*
+     - *Imposta il tuo fuso orario nelle variabili d'ambiente:*
+     - *Specifica il tuo IP locale nella configurazione o nell’ambiente, se richiesto per la comunicazione del bot.*
+   
+   ```bash
+   
+    volumes:
+    #UPLOADS
+       - /home/user/folder1_upload:/home/user/folder1_upload
+    #DOWNLOADS
+       - /home/user/folder2_download:/home/user/folder2_download
+    environment:
+       - TZ=Europe/Rome
+       - LOCAL_IP=YOURLOCALIP
+   
+3. **Build e avvia l'app con Docker Compose:**:
+   ```bash
+   sudo docker-compose build
+   sudo docker-compose up -d
+4. **Accedi alla GUI Web nel tuo browser all’indirizzo:**:
+   ```bash
+   http://localhost:8082 (or your configured IP and port)
+
