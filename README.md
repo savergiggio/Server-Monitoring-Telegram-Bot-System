@@ -4,7 +4,12 @@
 Telegram Server Monitor is a fully containerized application that provides a web-based GUI and a Telegram bot to monitor and manage your Linux server. It delivers real-time notifications about SSH/SFTP access, system resource usage, internet connectivity, and Docker container management. The solution enables both remote monitoring and control directly from your browser or Telegram.
 
 ---
+## 🛠️ Requirements
 
+- Docker and Docker Compose installed on a Linux server (Debian/Ubuntu recommended).
+- Telegram Bot Token (create one via [@BotFather](https://t.me/BotFather)).
+- Telegram Chat ID (user or group) for receiving notifications.
+- 
 ## 📦 Installation
 
 1. **Clone the repository**:
@@ -37,3 +42,67 @@ Telegram Server Monitor is a fully containerized application that provides a web
 4. **Access the Web GUI in your browser at:**:
    ```bash
    http://localhost:8082 (or your configured IP and port)
+
+
+
+## 🌐 Web GUI Features
+
+La GUI è suddivisa in tab per una gestione semplice e chiara:
+
+### 📊 Monitoring
+- Traccia connessioni SSH/SFTP.
+- Invia notifiche Telegram immediate a ogni nuovo login.
+
+### 🤖 Telegram
+- Imposta Token Bot Telegram e Chat ID.
+- Visualizza la lista completa dei comandi supportati.
+
+### 🚨 System Alert
+- Attiva/disattiva il monitoraggio di sistema.
+- Visualizza metriche live: CPU, RAM, temperatura CPU, stato mount point.
+- Configura soglie di allerta per CPU, RAM, temperatura CPU, spazio disco.
+- Abilita promemoria per stati di allerta persistenti.
+- Monitora connessione internet con notifiche di disconnessione/riconnessione.
+
+### 📂 Mount Points
+- Gestisci mount point usati dai comandi bot Telegram:
+  - `/upload` (directory da cui caricare file)
+  - `/download` (directory in cui scaricare file)
+- Nessuna configurazione manuale backend necessaria.
+
+### 🌍 Languages
+- Gestisci lingue dell’interfaccia e del bot.
+- Carica file JSON per aggiungere lingue.
+- Cambia lingua attiva dinamicamente per GUI e bot.
+
+### ℹ️ Info
+- Informazioni generali su app, versione e sistema.
+- Link a documentazione e supporto.
+
+
+
+## 🤖 Telegram Bot Features
+
+### 🛡️ Notifications  
+Receive real-time alerts for:  
+- SSH/SFTP access  
+- CPU, RAM, and temperature thresholds  
+- Disk space usage  
+- Internet connectivity loss and restoration  
+
+### 📊 System Monitoring Commands  
+Get current CPU, RAM, disk usage, and network status via bot commands.
+
+### 🐳 Docker Container Management  
+- List running containers  
+- Start and stop containers  
+- View logs of specific containers  
+
+### 🔁 Server Control  
+Reboot your server using a dedicated bot command.
+
+### 📂 File Operations  
+Upload and download files to/from configured mount points via the Telegram bot.
+
+
+
