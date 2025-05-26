@@ -1,3 +1,6 @@
+*This README is in English.*  
+*Per la versione italiana, clicca qui:* [README Italiano](README.it.md)
+
 # 🖥️ Telegram Server Monitor  
 **Dockerized WebApp + Telegram Bot for Remote Server Monitoring and Control**
 
@@ -8,8 +11,8 @@ Telegram Server Monitor is a fully containerized application that provides a web
 
 - Docker and Docker Compose installed on a Linux server (Debian/Ubuntu recommended).
 - Telegram Bot Token (create one via [@BotFather](https://t.me/BotFather)).
-- Telegram Chat ID (user or group) for receiving notifications.
-- 
+- Telegram ChatID (get from [@myidbot](https://t.me/IDBot))
+  
 ## 📦 Installation
 
 1. **Clone the repository**:
