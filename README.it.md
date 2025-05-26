@@ -48,61 +48,58 @@ Telegram Server Monitor è un'applicazione completamente containerizzata che for
 
 
 ---
-## 🌐 Funzionalità GUI Web
+## 🌐 Funzionalità dell'interfaccia Web
 
-La GUI è suddivisa in tab per una gestione semplice e chiara:
+La GUI è organizzata in schede per una gestione semplice e chiara:
 
-### 📊 Monitoring
-- Traccia connessioni SSH/SFTP.
-- Invia notifiche Telegram immediate a ogni nuovo login.
-
+### 📊 Monitoraggio
+- Tiene traccia delle connessioni SSH/SFTP.
+- Invia notifiche Telegram istantanee per ogni nuovo login, inclusi dettagli come l'indirizzo IP esterno, nome utente, nome host, IP interno, timestamp e un link per maggiori informazioni sull'IP (tramite ipinfo.io).
+IMMAGINE
 ### 🤖 Telegram
-- Imposta Token Bot Telegram e Chat ID.
+- Imposta il Token del Bot Telegram e il Chat ID.
 - Visualizza la lista completa dei comandi supportati.
 
-### 🚨 System Alert
-- Attiva/disattiva il monitoraggio di sistema.
-- Visualizza metriche live: CPU, RAM, temperatura CPU, stato mount point.
-- Configura soglie di allerta per CPU, RAM, temperatura CPU, spazio disco.
-- Abilita promemoria per stati di allerta persistenti.
-- Monitora connessione internet con notifiche di disconnessione/riconnessione.
+### 🚨 Allarme di Sistema
+- Attiva/disattiva il monitoraggio del sistema.
+- Visualizza metriche in tempo reale: CPU, RAM, temperatura della CPU, stato dei punti di mount.
+- Configura le soglie di allarme per CPU, RAM, temperatura della CPU e spazio su disco.
+- Attiva promemoria per stati di allarme persistenti.
+- Invia una nuova notifica quando una soglia precedentemente superata ritorna alla normalità.
+- Monitora la connessione internet con notifiche di disconnessione/riconnessione.
 
-### 📂 Mount Points
-- Gestisci mount point usati dai comandi bot Telegram:
-  - `/upload` (directory da cui caricare file)
-  - `/download` (directory in cui scaricare file)
-- Nessuna configurazione manuale backend necessaria.
+### 📂 Punti di Mount
+- Gestisci i punti di mount utilizzati dai comandi del bot Telegram:
+  - `/upload` (directory da cui caricare i file)
+  - `/download` (directory in cui vengono scaricati i file)
+- Utilizzati anche per monitorare l'uso del disco e attivare allarmi quando vengono superate le soglie di spazio.
 
-### 🌍 Languages
-- Gestisci lingue dell’interfaccia e del bot.
-- Carica file JSON per aggiungere lingue.
-- Cambia lingua attiva dinamicamente per GUI e bot.
-
-### ℹ️ Info
-- Informazioni generali su app, versione e sistema.
-- Link a documentazione e supporto.
-
+### 🌍 Lingue
+- Gestisci le lingue dell'interfaccia e del bot.
+- Carica file JSON per aggiungere nuove lingue.
+- Cambia dinamicamente la lingua attiva sia per la GUI che per il bot.
+- Tutte le etichette dei pulsanti e i messaggi di allarme (sia nel bot che nella GUI) possono essere completamente personalizzati tramite i file JSON delle lingue.
 
 ---
 ## 🤖 Funzionalità del Bot Telegram
 
 ### 🛡️ Notifiche  
-Ricevi allarmi in tempo reale per:
-- Accessi SSH/SFTP
-- CPU, RAM, and temperatura thresholds  
-- Utilizzo dello spazio su disco
-- Perdita e ripristino della connettività internet
+Ricevi avvisi in tempo reale per:  
+- Accessi SSH/SFTP  
+- Superamento soglie di CPU, RAM e temperatura  
+- Utilizzo dello spazio su disco  
+- Ripristino della connettività internet  
 
-### 📊 Comandi di Monitoraggio
-Ricevi lo stato attuale di CPU, RAM, spazio su disco e rete tramite comandi del bot.
+### 📊 Comandi di Monitoraggio del Sistema  
+Ottieni lo stato corrente di CPU, RAM, uso del disco e stato della rete tramite comandi del bot.
 
-### 🐳 Gestione dei Container Docker
-- Elenca i container in esecuzione
-- Avvia e ferma container
-- Visualizza i log di specifici container 
+### 🐳 Gestione dei Container Docker  
+- Elenca i container in esecuzione  
+- Avvia, metti in pausa e ferma i container
+- Visualizza la configurazione dei container
+
+### 📂 Operazioni sui File  
+Carica e scarica file da/sul server tramite i punti di mount configurati, utilizzando il bot Telegram.
 
 ### 🔁 Controllo del Server  
-Riavvia il server con un comando dedicato del bot.
-
-### 📂 Operazioni su File  
-Carica e scarica file dai punti di mount configurati tramite bot Telegram.
+Riavvia il tuo server utilizzando un comando dedicato del bot.
