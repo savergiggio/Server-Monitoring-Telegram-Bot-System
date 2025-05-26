@@ -46,7 +46,6 @@ Telegram Server Monitor is a fully containerized application that provides a web
    http://localhost:8082 (or your configured IP and port)
 
 
-
 ## 🌐 Web GUI Features
 
 The GUI is organized into tabs for simple and clear management:
