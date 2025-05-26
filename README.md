@@ -49,37 +49,38 @@ Telegram Server Monitor is a fully containerized application that provides a web
 
 ## 🌐 Web GUI Features
 
-La GUI è suddivisa in tab per una gestione semplice e chiara:
+The GUI is organized into tabs for simple and clear management:
 
 ### 📊 Monitoring
-- Traccia connessioni SSH/SFTP.
-- Invia notifiche Telegram immediate a ogni nuovo login.
+- Tracks SSH/SFTP connections.
+- Sends immediate Telegram notifications for each new login.
 
 ### 🤖 Telegram
-- Imposta Token Bot Telegram e Chat ID.
-- Visualizza la lista completa dei comandi supportati.
+- Set the Telegram Bot Token and Chat ID.
+- View the complete list of supported commands.
 
 ### 🚨 System Alert
-- Attiva/disattiva il monitoraggio di sistema.
-- Visualizza metriche live: CPU, RAM, temperatura CPU, stato mount point.
-- Configura soglie di allerta per CPU, RAM, temperatura CPU, spazio disco.
-- Abilita promemoria per stati di allerta persistenti.
-- Monitora connessione internet con notifiche di disconnessione/riconnessione.
+- Enable/disable system monitoring.
+- View live metrics: CPU, RAM, CPU temperature, mount point status.
+- Configure alert thresholds for CPU, RAM, CPU temperature, and disk space.
+- Enable reminders for persistent alert states.
+- Monitor internet connection with disconnection/reconnection notifications.
 
 ### 📂 Mount Points
-- Gestisci mount point usati dai comandi bot Telegram:
-  - `/upload` (directory da cui caricare file)
-  - `/download` (directory in cui scaricare file)
-- Nessuna configurazione manuale backend necessaria.
+- Manage mount points used by Telegram bot commands:
+  - `/upload` (directory from which to upload files)
+  - `/download` (directory where files are downloaded)
+- No backend manual configuration required.
 
 ### 🌍 Languages
-- Gestisci lingue dell’interfaccia e del bot.
-- Carica file JSON per aggiungere lingue.
-- Cambia lingua attiva dinamicamente per GUI e bot.
+- Manage interface and bot languages.
+- Upload JSON files to add new languages.
+- Dynamically change the active language for both GUI and bot.
 
 ### ℹ️ Info
-- Informazioni generali su app, versione e sistema.
-- Link a documentazione e supporto.
+- General information about the app, version, and system.
+- Links to documentation and support.
+
 
 
 
