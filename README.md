@@ -275,9 +275,38 @@ Get current CPU, RAM, disk usage, and network status via bot commands.
 
 ### 📂 File Operations  
 Upload and download files to/from the server via the configured mount points via the Telegram bot.
+ - The  `/upload` command allow to:
+       - Navigate between folders
+       - Create New Folders
+       - Delete Folders
+       - Upload files to the Server
+ - The  `/download` command allow to:
+       - Download files from the Server
+   
+<div align="center">
+   
+ ## 📸 UPLOAD COMMAND
+<details>
+   <img src="Screen/IMG_20250525_232816_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+<div align="center">
+   
+ ## 📸 DOWNLOAD COMMAND
+<details>
+   <img src="Screen/IMG_20250525_233017_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
 
 ### 🔁 Server Control  
 Reboot your server using a dedicated bot command.
 
-
+<div align="center">
+   
+ ## 📸 REBOOT COMMAND
+<details>
+   <img src="Screen/IMG_20250525_233045.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
 
