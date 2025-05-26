@@ -3,7 +3,7 @@
 # 🖥️ Telegram Server Monitor  
 **Dockerized WebApp + Telegram Bot for Remote Server Monitoring and Control**
 
-Telegram Server Monitor is a fully containerized application that provides a web-based GUI and a Telegram bot to monitor and manage your Linux server. It delivers real-time notifications about SSH/SFTP access, system resource usage, internet connectivity, and Docker container management. The solution enables both remote monitoring and control directly from your browser or Telegram.
+Telegram Server Monitor is a fully containerized application that provides a web-based GUI and a Telegram bot to monitor and manage your Linux server. It delivers real-time notifications about SSH/SFTP access, system resource usage, internet connectivity, and Docker container management, upload and download of files from bot to server and viceversa. The solution enables both remote monitoring and control directly from your browser or Telegram.
 
 ---
 ## 🌐 Web GUI Features
