@@ -1,5 +1,22 @@
 ## 🟢⚪🔴 *Per la versione italiana, clicca qui:* [README Italiano](README.it.md) 
 
+## 📚 Index  
+- 🖥️ [Telegram Server Monitor – Overview](#️-telegram-server-monitor)  
+- 🌐 [Web GUI Features](#-web-gui-features)  
+  - 📊 [Monitoring](#-monitoring)  
+  - 🤖 [Telegram Settings](#-telegram)  
+  - 🚨 [System Alert](#-system-alert)  
+  - 📂 [Mount Points](#-mount-points)  
+  - 🌍 [Languages](#-languages)  
+- 🤖 [Telegram Bot Features](#-telegram-bot-features)  
+  - 🛡️ [Notifications](#️-notifications)  
+  - 📊 [System Monitoring Commands](#-system-monitoring-commands)  
+  - 🐳 [Docker Container Management](#-docker-container-management)  
+  - 📂 [File Operations](#-file-operations)  
+  - 🔁 [Server Control](#-server-control)  
+- 🛠️ [Requirements](#️-requirements)  
+- 📦 [Installation](#-installation)  
+
 # 🖥️ Telegram Server Monitor  
 **Dockerized WebApp + Telegram Bot for Remote Server Monitoring and Control**
 
