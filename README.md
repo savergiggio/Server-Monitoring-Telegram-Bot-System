@@ -1,5 +1,4 @@
-*This README is in English.*  
-*Per la versione italiana, clicca qui:* [README Italiano](README.it.md)
+## 🟢⚪🔴 *Per la versione italiana, clicca qui:* [README Italiano](README.it.md) 
 
 # 🖥️ Telegram Server Monitor  
 **Dockerized WebApp + Telegram Bot for Remote Server Monitoring and Control**
