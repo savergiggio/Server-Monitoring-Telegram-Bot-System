@@ -50,13 +50,44 @@ Telegram Server Monitor is a fully containerized application that provides a web
 
 The GUI is organized into tabs for simple and clear management:
 
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW  GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (19).png" alt="Monitoring Tab Screenshot" style="width:100%;" />
+</details>
+</div>
+
 ### 📊 Monitoring
 - Tracks SSH/SFTP connections.
 - Sends instant Telegram notifications for each new login, including details such as the external IP address, username, host name, internal IP, timestamp, and a link to more information about the IP (via ipinfo.io).
-IMAGE
+  
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW  GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (17).png" alt="Monitoring Tab Screenshot" style="width:100%;" />
+</details>
+</div>
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW  BOT SCREENSHOTS
+<details>
+   <img src="Screen/IMG_20250525_233124_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
 ### 🤖 Telegram
 - Set the Telegram Bot Token and Chat ID.
 - View the complete list of supported commands.
+  
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW  GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (18).png" alt="Monitoring Tab Screenshot" style="width:100%;" />
+</details>
+</div>
 
 ### 🚨 System Alert
 - Enable/disable system monitoring.
@@ -66,17 +97,56 @@ IMAGE
 - Sends a new notification when a previously exceeded threshold returns to normal.
 - Monitor internet connection with disconnection/reconnection notifications.
 
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (19).png" alt="Monitoring Tab Screenshot" style="width:80%" />
+</details>
+</div>
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (20).png" alt="Monitoring Tab Screenshot" style="width:80%;" />
+</details>
+</div>
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (21).png" alt="Monitoring Tab Screenshot" style="width:80%;" />
+</details>
+</div>
+
 ### 📂 Mount Points
 - Manage mount points used by Telegram bot commands:
   - `/upload` (directory from which to upload files)
   - `/download` (directory where files are downloaded)
 - Also used to monitor disk usage and trigger alerts when space thresholds are exceeded.
 
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW  GUI SCREENSHOTS
+<details>
+   <img src="Screen/Screenshot (22).png" alt="Monitoring Tab Screenshot" style="width:80%;" />
+</details>
+</div>
+
 ### 🌍 Languages
 - Manage interface and bot languages.
 - Upload JSON files to add new languages.
 - Dynamically change the active language for both GUI and bot.
 - All button labels and alert messages (in both the bot and the GUI) can be fully customized through the JSON language files.
+
+<div align="center">
+   
+ ## 📸 CLICK   TO   VIEW  GUI SCREENSHOTS
+<details>
+   <img src="Screen/10.png" alt="Monitoring Tab Screenshot" style="width:80%;" />
+</details>
+</div>
+
 
 ---
 ## 🤖 Telegram Bot Features
