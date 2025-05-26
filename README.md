@@ -52,8 +52,8 @@ The GUI is organized into tabs for simple and clear management:
 
 ### 📊 Monitoring
 - Tracks SSH/SFTP connections.
-- Sends immediate Telegram notifications for each new login.
-
+- Sends instant Telegram notifications for each new login, including details such as the external IP address, username, host name, internal IP, timestamp, and a link to more information about the IP (via ipinfo.io).
+IMAGE
 ### 🤖 Telegram
 - Set the Telegram Bot Token and Chat ID.
 - View the complete list of supported commands.
@@ -63,24 +63,20 @@ The GUI is organized into tabs for simple and clear management:
 - View live metrics: CPU, RAM, CPU temperature, mount point status.
 - Configure alert thresholds for CPU, RAM, CPU temperature, and disk space.
 - Enable reminders for persistent alert states.
+- Sends a new notification when a previously exceeded threshold returns to normal.
 - Monitor internet connection with disconnection/reconnection notifications.
 
 ### 📂 Mount Points
 - Manage mount points used by Telegram bot commands:
   - `/upload` (directory from which to upload files)
   - `/download` (directory where files are downloaded)
-- No backend manual configuration required.
+- Also used to monitor disk usage and trigger alerts when space thresholds are exceeded.
 
 ### 🌍 Languages
 - Manage interface and bot languages.
 - Upload JSON files to add new languages.
 - Dynamically change the active language for both GUI and bot.
-
-### ℹ️ Info
-- General information about the app, version, and system.
-- Links to documentation and support.
-
-
+- All button labels and alert messages (in both the bot and the GUI) can be fully customized through the JSON language files.
 
 ---
 ## 🤖 Telegram Bot Features
@@ -90,21 +86,21 @@ Receive real-time alerts for:
 - SSH/SFTP access  
 - CPU, RAM, and temperature thresholds  
 - Disk space usage  
-- Internet connectivity loss and restoration  
+- Internet connectivity restoration  
 
 ### 📊 System Monitoring Commands  
 Get current CPU, RAM, disk usage, and network status via bot commands.
 
 ### 🐳 Docker Container Management  
 - List running containers  
-- Start and stop containers  
-- View logs of specific containers  
+- Start, Pause and Stop containers
+- View container configuration
+
+### 📂 File Operations  
+Upload and download files to/from the server via the configured mount points via the Telegram bot.
 
 ### 🔁 Server Control  
 Reboot your server using a dedicated bot command.
-
-### 📂 File Operations  
-Upload and download files to/from configured mount points via the Telegram bot.
 
 
 
