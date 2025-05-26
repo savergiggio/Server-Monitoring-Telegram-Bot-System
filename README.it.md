@@ -304,7 +304,7 @@ Riavvia il server usando un comando dedicato del bot.
 
 - Docker e Docker Compose installati su un server Linux (Debian/Ubuntu consigliati).
 - Token del Bot Telegram (creane uno tramite [@BotFather](https://t.me/BotFather)).
-- ChatID Telegram (ottienilo da [@myidbot](https://t.me/IDBot))
+- ChatID Telegram (ottienilo da @myidbot)
 ---  
 ## 📦 Installazione
 
