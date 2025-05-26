@@ -151,6 +151,15 @@ The GUI is organized into tabs for simple and clear management:
 ---
 ## 🤖 Telegram Bot Features
 
+<div align="center">
+   
+ ## 📸 TELEGRAM BOT COMMANDS
+<details>
+   <img src="Screen/IMG_20250525_232320.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
 ### 🛡️ Notifications  
 Receive real-time alerts for:  
 - SSH/SFTP access  
@@ -158,13 +167,111 @@ Receive real-time alerts for:
 - Disk space usage  
 - Internet connectivity restoration  
 
+
+<div align="center">
+   
+ ## 📸 SSH NOTIFICATION
+<details>
+   <img src="Screen/IMG_20250525_233124_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 CPU, CPU_TEMP, RAM & DISK Alert Notification
+<details>
+   <img src="Screen/IMG_20250525_233501_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 CPU, CPU_TEMP, RAM & DISK Alert Solved
+<details>
+   <img src="Screen/IMG_20250525_233517_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
 ### 📊 System Monitoring Commands  
 Get current CPU, RAM, disk usage, and network status via bot commands.
+
+
+<div align="center">
+   
+ ## 📸 Resource Command
+<details>
+   <img src="Screen/IMG_20250525_232345.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 CPU TELEMETRY
+<details>
+   <img src="Screen/IMG_20250525_232404.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 RAM TELEMETRY
+<details>
+   <img src="Screen/IMG_20250525_232417.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+<div align="center">
+   
+ ## 📸 DISK TELEMETRY
+<details>
+   <img src="Screen/IMG_20250525_232435_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 NETWORK TELEMETRY
+<details>
+   <img src="Screen/IMG_20250525_232450_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 CONTAINER MANAGMENT
+<details>
+   <img src="Screen/IMG_20250525_232535.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
 
 ### 🐳 Docker Container Management  
 - List running containers  
 - Start, Pause and Stop containers
 - View container configuration
+
+<div align="center">
+   
+ ## 📸 DOCKER COMMAND
+<details>
+   <img src="Screen/IMG_20250525_232535.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
+
+<div align="center">
+   
+ ## 📸 CONTAINER MANAGER
+<details>
+   <img src="Screen/IMG_20250525_232629_LI.jpg" alt="Monitoring Tab Screenshot" style="width:50%;" />
+</details>
+</div>
+
 
 ### 📂 File Operations  
 Upload and download files to/from the server via the configured mount points via the Telegram bot.
