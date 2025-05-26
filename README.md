@@ -17,6 +17,8 @@
 - 🛠️ [Requirements](#️-requirements)  
 - 📦 [Installation](#-installation)  
 
+---
+
 # 🖥️ Telegram Server Monitor  
 **Dockerized WebApp + Telegram Bot for Remote Server Monitoring and Control**
 
