@@ -16,7 +16,7 @@ Telegram Server Monitor is a fully containerized application that provides a web
 
 1. **Clone the repository**:
    ```bash
-   git clone [https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System.git](https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System.git)
+   git clone https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System.git
    cd Server-Monitoring-Telegram-Bot-System
 
 2. **Edit *docker-compose.yml* before running (highly recommended):**:
