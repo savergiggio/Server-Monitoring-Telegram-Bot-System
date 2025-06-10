@@ -1,11 +1,12 @@
 ## 🟢⚪🔴 *Per la versione italiana, clicca qui:* [README Italiano](README.it.md) 
-
+## New 2.0 Version - Branch 2.0 ##
 ## 📚 Index  
 - 🖥️ [Telegram Server Monitor – Overview](#️-telegram-server-monitor)  
 - 🌐 [Web GUI Features](#-web-gui-features)  
   - 📊 [Monitoring](#-monitoring)  
   - 🤖 [Telegram Settings](#-telegram)  
-  - 🚨 [System Alert](#-system-alert)  
+  - 🚨 [System Alert](#-system-alert)
+  - 🖥️ [AI Camera RTSP Detection with Bot Alert](#-ai-detection)
   - 📂 [Mount Points](#-mount-points)  
   - 🌍 [Languages](#-languages)  
 - 🤖 [Telegram Bot Features](#-telegram-bot-features)  
@@ -13,7 +14,7 @@
   - 📊 [System Monitoring Commands](#-system-monitoring-commands)  
   - 🐳 [Docker Container Management](#-docker-container-management)  
   - 📂 [File Operations](#-file-operations)  
-  - 🔁 [Server Control](#-server-control)  
+  - 🔁 [Server Control](#-server-control)
 - 🛠️ [Requirements](#️-requirements)  
 - 📦 [Installation](#-installation)  
 
@@ -97,6 +98,12 @@ The GUI is organized into tabs for simple and clear management:
    <img src="Screen/Screenshot (21).png" alt="Monitoring Tab Screenshot" style="width:80%;" />
 </details>
 </div>
+
+### 🖥️ AI Camera RTSP Detection with Bot Alert
+- Real-time detection of people/animals/objects in RTSP streams
+- Configurable sensitivity and alert rules
+- Telegram notifications with snapshots
+- On/off toggle via WebUI or Telegram
 
 ### 📂 Mount Points
 - Manage mount points used by Telegram bot commands:
