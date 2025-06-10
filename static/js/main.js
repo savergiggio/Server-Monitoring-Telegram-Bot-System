@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Carica i comandi all'avvio della pagina
-    loadCommands();
-    
     // Funzione per ottenere traduzioni
     function getTranslation(key) {
         const keys = key.split('.');
@@ -61,9 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alertMessage.classList.add('d-none');
         }, 5000);
     }
-    
-    // Rendi showMessage accessibile globalmente
-    window.showMessage = showMessage;
     
     // Toggle del monitoraggio
     if (monitorToggle) {
@@ -585,8 +579,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // CPU
         document.getElementById('cpuEnabled').checked = monitoringConfig.cpu_usage?.enabled || false;
         document.getElementById('cpuThreshold').value = monitoringConfig.cpu_usage?.threshold || 80;
-        document.getElementById('cpuHysteresisEnabled').checked = monitoringConfig.cpu_usage?.hysteresis_enabled || false;
-        document.getElementById('cpuHysteresisDuration').value = monitoringConfig.cpu_usage?.hysteresis_duration || 5;
         document.getElementById('cpuReminderEnabled').checked = monitoringConfig.cpu_usage?.reminder_enabled || false;
         document.getElementById('cpuReminderInterval').value = monitoringConfig.cpu_usage?.reminder_interval || 300;
         document.getElementById('cpuReminderUnit').value = monitoringConfig.cpu_usage?.reminder_unit || 'seconds';
@@ -594,8 +586,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // RAM
         document.getElementById('ramEnabled').checked = monitoringConfig.ram_usage?.enabled || false;
         document.getElementById('ramThreshold').value = monitoringConfig.ram_usage?.threshold || 85;
-        document.getElementById('ramHysteresisEnabled').checked = monitoringConfig.ram_usage?.hysteresis_enabled || false;
-        document.getElementById('ramHysteresisDuration').value = monitoringConfig.ram_usage?.hysteresis_duration || 5;
         document.getElementById('ramReminderEnabled').checked = monitoringConfig.ram_usage?.reminder_enabled || false;
         document.getElementById('ramReminderInterval').value = monitoringConfig.ram_usage?.reminder_interval || 300;
         document.getElementById('ramReminderUnit').value = monitoringConfig.ram_usage?.reminder_unit || 'seconds';
@@ -603,8 +593,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Temperatura
         document.getElementById('tempEnabled').checked = monitoringConfig.cpu_temperature?.enabled || false;
         document.getElementById('tempThreshold').value = monitoringConfig.cpu_temperature?.threshold || 70;
-        document.getElementById('tempHysteresisEnabled').checked = monitoringConfig.cpu_temperature?.hysteresis_enabled || false;
-        document.getElementById('tempHysteresisDuration').value = monitoringConfig.cpu_temperature?.hysteresis_duration || 5;
         document.getElementById('tempReminderEnabled').checked = monitoringConfig.cpu_temperature?.reminder_enabled || false;
         document.getElementById('tempReminderInterval').value = monitoringConfig.cpu_temperature?.reminder_interval || 600;
         document.getElementById('tempReminderUnit').value = monitoringConfig.cpu_temperature?.reminder_unit || 'seconds';
@@ -640,34 +628,28 @@ document.addEventListener('DOMContentLoaded', function() {
             configDiv.className = 'monitoring-config';
             configDiv.innerHTML = `
                 <h6><i class="bi bi-hdd"></i> ${mountPoint}</h6>
-                
-                <!-- Sezione Toggle -->
-                <div class="row mb-3">
-                    <div class="col-md-3">
+                <div class="row">
+                    <div class="col-md-2">
                         <div class="form-check form-switch">
                             <input class="form-check-input disk-enabled" type="checkbox" data-mount="${mountPoint}" ${diskConfig.enabled ? 'checked' : ''}>
                             <label class="form-check-label">${getTranslation('alerts.enabled')}</label>
                         </div>
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label">${getTranslation('alerts.threshold')} (%)</label>
+                        <input type="number" class="form-control disk-threshold" data-mount="${mountPoint}" value="${diskConfig.threshold}" min="1" max="100">
+                    </div>
+                    <div class="col-md-2">
                         <div class="form-check form-switch">
                             <input class="form-check-input disk-reminder-enabled" type="checkbox" data-mount="${mountPoint}" ${diskConfig.reminder_enabled ? 'checked' : ''}>
                             <label class="form-check-label">${getTranslation('alerts.reminder')}</label>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Sezione Configurazione -->
-                <div class="row">
-                    <div class="col-md-3">
-                        <label class="form-label">${getTranslation('alerts.threshold')} (%)</label>
-                        <input type="number" class="form-control disk-threshold" data-mount="${mountPoint}" value="${diskConfig.threshold}" min="1" max="100">
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">${getTranslation('alerts.interval')}</label>
                         <input type="number" class="form-control disk-reminder-interval" data-mount="${mountPoint}" value="${diskConfig.reminder_interval}" min="60">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">${getTranslation('alerts.unit')}</label>
                         <select class="form-select disk-reminder-unit" data-mount="${mountPoint}">
                             <option value="seconds" ${diskConfig.reminder_unit === 'seconds' ? 'selected' : ''}>${getTranslation('alerts.units.seconds')}</option>
@@ -676,8 +658,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="days" ${diskConfig.reminder_unit === 'days' ? 'selected' : ''}>${getTranslation('alerts.units.days')}</option>
                         </select>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-info btn-sm" onclick="testAlert('disk_usage')">
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-outline-info btn-sm mt-4" onclick="testAlert('disk_usage')">
                             <i class="bi bi-play"></i> ${getTranslation('alerts.test')}
                         </button>
                     </div>
@@ -697,8 +679,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 cpu_usage: {
                     enabled: document.getElementById('cpuEnabled').checked,
                     threshold: parseFloat(document.getElementById('cpuThreshold').value),
-                    hysteresis_enabled: document.getElementById('cpuHysteresisEnabled').checked,
-                    hysteresis_duration: parseInt(document.getElementById('cpuHysteresisDuration').value),
                     reminder_enabled: document.getElementById('cpuReminderEnabled').checked,
                     reminder_interval: parseInt(document.getElementById('cpuReminderInterval').value),
                     reminder_unit: document.getElementById('cpuReminderUnit').value
@@ -706,8 +686,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ram_usage: {
                     enabled: document.getElementById('ramEnabled').checked,
                     threshold: parseFloat(document.getElementById('ramThreshold').value),
-                    hysteresis_enabled: document.getElementById('ramHysteresisEnabled').checked,
-                    hysteresis_duration: parseInt(document.getElementById('ramHysteresisDuration').value),
                     reminder_enabled: document.getElementById('ramReminderEnabled').checked,
                     reminder_interval: parseInt(document.getElementById('ramReminderInterval').value),
                     reminder_unit: document.getElementById('ramReminderUnit').value
@@ -715,8 +693,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 cpu_temperature: {
                     enabled: document.getElementById('tempEnabled').checked,
                     threshold: parseFloat(document.getElementById('tempThreshold').value),
-                    hysteresis_enabled: document.getElementById('tempHysteresisEnabled').checked,
-                    hysteresis_duration: parseInt(document.getElementById('tempHysteresisDuration').value),
                     reminder_enabled: document.getElementById('tempReminderEnabled').checked,
                     reminder_interval: parseInt(document.getElementById('tempReminderInterval').value),
                     reminder_unit: document.getElementById('tempReminderUnit').value
@@ -1196,667 +1172,4 @@ document.addEventListener('DOMContentLoaded', function() {
             applyTheme(theme);
         }
     };
-
-    // ========== GESTIONE COMANDI ==========
-
-    // Carica la lista dei comandi
-    async function loadCommands() {
-        try {
-            const response = await fetch('/api/commands');
-            const data = await response.json();
-            
-            if (data.success) {
-                renderCommandsList(data.commands);
-            } else {
-                showMessage(data.message, 'danger');
-            }
-        } catch (error) {
-            showMessage('Errore nel caricamento dei comandi', 'danger');
-            console.error('Errore:', error);
-        }
-    }
-
-    // Renderizza la lista dei comandi
-    function renderCommandsList(commands) {
-        const container = document.getElementById('commandsList');
-        
-        if (!commands || Object.keys(commands).length === 0) {
-            container.innerHTML = `
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> ${getTranslation('commands.no_commands')}
-                </div>
-            `;
-            return;
-        }
-        
-        let html = '';
-        for (const [id, command] of Object.entries(commands)) {
-            const statusBadge = command.enabled ? 
-                '<span class="badge bg-success">Abilitato</span>' : 
-                '<span class="badge bg-secondary">Disabilitato</span>';
-            
-            // Rimosso badge cron
-            
-            html += `
-                <div class="card mb-2">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="card-title">${command.name}</h6>
-                                <p class="card-text text-muted">${command.description}</p>
-                                <small class="text-muted">Script: ${command.script_path}</small>
-                                <div class="mt-2">
-                                    ${statusBadge}
-                                </div>
-                            </div>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCommand('${id}')">
-                                    <i class="bi bi-pencil"></i> ${getTranslation('commands.edit_command')}
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="executeCommand('${id}')" ${!command.enabled ? 'disabled' : ''}>
-                                    <i class="bi bi-play"></i> ${getTranslation('commands.execute_command')}
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCommand('${id}')">
-                                    <i class="bi bi-trash"></i> ${getTranslation('commands.delete_command')}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        container.innerHTML = html;
-    }
-
-    // Mostra il form per aggiungere un nuovo comando
-    window.addNewCommand = function() {
-        document.getElementById('newCommandCard').style.display = 'block';
-        document.getElementById('commandForm').reset();
-        document.getElementById('cronScheduleDiv').style.display = 'none';
-        
-        // Aggiungi event listener per il checkbox cron_enabled
-        document.getElementById('commandCronEnabled').addEventListener('change', function() {
-            document.getElementById('cronScheduleDiv').style.display = this.checked ? 'block' : 'none';
-        });
-    };
-
-    // Nasconde il form per aggiungere un nuovo comando
-    window.cancelNewCommand = function() {
-        document.getElementById('newCommandCard').style.display = 'none';
-        document.getElementById('commandForm').reset();
-        document.getElementById('cronScheduleDiv').style.display = 'none';
-        
-        // Ripristina il pulsante di salvataggio per nuovo comando
-        const saveButton = document.querySelector('#newCommandCard .btn-success');
-        saveButton.innerHTML = '<i class="bi bi-check-circle"></i> ' + getTranslation('commands.save_command');
-        saveButton.onclick = saveCommandFromForm;
-        
-        // Ripristina il titolo del card
-        const cardHeader = document.querySelector('#newCommandCard .card-header h6');
-        cardHeader.innerHTML = '<i class="bi bi-plus-circle"></i> ' + getTranslation('commands.new_command');
-    };
-
-    // Salva un nuovo comando dal form
-    window.saveCommandFromForm = function() {
-        // Validazione lato client
-        const scriptPath = document.getElementById('commandScript').value.trim();
-        if (!scriptPath) {
-            showMessage('Campo script_path richiesto', 'danger');
-            return;
-        }
-        
-        const commandData = {
-            name: document.getElementById('commandName').value.trim(),
-            description: document.getElementById('commandDescription').value.trim(),
-            script_path: scriptPath,
-            enabled: document.getElementById('commandEnabled').checked,
-            cron_enabled: document.getElementById('commandCronEnabled').checked,
-            cron_schedule: document.getElementById('cronSchedule').value.trim()
-        };
-        
-        saveCommand(commandData);
-    };
-
-    // Aggiorna un comando esistente dal form
-    window.updateCommandFromForm = async function(commandId) {
-        // Validazione lato client
-        const scriptPath = document.getElementById('commandScript').value.trim();
-        if (!scriptPath) {
-            showMessage('Campo script_path richiesto', 'danger');
-            return;
-        }
-        
-        const commandData = {
-            name: document.getElementById('commandName').value.trim(),
-            description: document.getElementById('commandDescription').value.trim(),
-            script_path: scriptPath,
-            enabled: document.getElementById('commandEnabled').checked,
-            cron_enabled: document.getElementById('commandCronEnabled').checked,
-            cron_schedule: document.getElementById('cronSchedule').value.trim()
-        };
-        
-        try {
-            const response = await fetch(`/api/commands/${commandId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(commandData)
-            });
-            
-            const data = await response.json();
-            showMessage(data.message, data.success ? 'success' : 'danger');
-            
-            if (data.success) {
-                loadCommands();
-                cancelNewCommand();
-            }
-        } catch (error) {
-            showMessage('Errore nell\'aggiornamento del comando', 'danger');
-            console.error('Errore:', error);
-        }
-    };
-
-    // Salva un nuovo comando
-    async function saveCommand(commandData) {
-        try {
-            const response = await fetch('/api/commands', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(commandData)
-            });
-            
-            const data = await response.json();
-            showMessage(data.message, data.success ? 'success' : 'danger');
-            
-            if (data.success) {
-                loadCommands();
-                cancelNewCommand();
-            }
-        } catch (error) {
-            showMessage('Errore nel salvataggio del comando', 'danger');
-            console.error('Errore:', error);
-        }
-    }
-
-    // Modifica un comando esistente
-    window.editCommand = async function(commandId) {
-        try {
-            // Carica i dati del comando
-            const response = await fetch(`/api/commands/${commandId}`);
-            const data = await response.json();
-            
-            if (!data.success) {
-                showMessage(data.message, 'danger');
-                return;
-            }
-            
-            const command = data.command;
-            
-            // Popola il form con i dati del comando
-            document.getElementById('commandName').value = command.name;
-            document.getElementById('commandDescription').value = command.description;
-            document.getElementById('commandScript').value = command.script_path;
-            document.getElementById('commandEnabled').checked = command.enabled;
-            document.getElementById('commandCronEnabled').checked = command.cron_enabled || false;
-            document.getElementById('cronSchedule').value = command.cron_schedule || '';
-            document.getElementById('cronScheduleDiv').style.display = command.cron_enabled ? 'block' : 'none';
-            
-            // Aggiungi event listener per il checkbox cron_enabled
-            document.getElementById('commandCronEnabled').addEventListener('change', function() {
-                document.getElementById('cronScheduleDiv').style.display = this.checked ? 'block' : 'none';
-            });
-            
-            // Mostra il form
-            document.getElementById('newCommandCard').style.display = 'block';
-            
-            // Cambia il pulsante di salvataggio per l'aggiornamento
-            const saveButton = document.querySelector('#newCommandCard .btn-success');
-            saveButton.innerHTML = '<i class="bi bi-check-circle"></i> ' + getTranslation('commands.update_command');
-            saveButton.onclick = () => updateCommandFromForm(commandId);
-            
-            // Cambia il titolo del card
-            const cardHeader = document.querySelector('#newCommandCard .card-header h6');
-            cardHeader.innerHTML = '<i class="bi bi-pencil"></i> ' + getTranslation('commands.edit_command');
-            
-        } catch (error) {
-            showMessage('Errore nel caricamento del comando', 'danger');
-            console.error('Errore:', error);
-        }
-    };
-
-    // Esegue un comando
-    window.executeCommand = async function(commandId) {
-        try {
-            const response = await fetch(`/api/commands/${commandId}/execute`, {
-                method: 'POST'
-            });
-            
-            const data = await response.json();
-            showMessage(data.message, data.success ? 'success' : 'danger');
-        } catch (error) {
-            showMessage('Errore nell\'esecuzione del comando', 'danger');
-            console.error('Errore:', error);
-        }
-    };
-
-    // Elimina un comando
-    window.deleteCommand = async function(commandId) {
-        if (!confirm(getTranslation('commands.confirm_delete'))) {
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/api/commands/${commandId}`, {
-                method: 'DELETE'
-            });
-            
-            const data = await response.json();
-            showMessage(data.message, data.success ? 'success' : 'danger');
-            
-            if (data.success) {
-                loadCommands();
-            }
-        } catch (error) {
-            showMessage('Errore nell\'eliminazione del comando', 'danger');
-            console.error('Errore:', error);
-        }
-    };
-
-    // Funzione per configurare l'interfaccia cron user-friendly - rimossa
-    
-    // Testa un comando
-    window.testCommand = async function() {
-        // Validazione lato client
-        const scriptPath = document.getElementById('commandScript').value.trim();
-        if (!scriptPath) {
-            showMessage('Campo script_path richiesto', 'danger');
-            return;
-        }
-        
-        const commandData = {
-            name: document.getElementById('commandName').value.trim(),
-            description: document.getElementById('commandDescription').value.trim(),
-            script_path: scriptPath,
-            enabled: document.getElementById('commandEnabled').checked,
-            cron_enabled: document.getElementById('commandCronEnabled').checked,
-            cron_schedule: document.getElementById('cronSchedule').value.trim()
-        };
-        
-        try {
-            const response = await fetch('/api/commands/test', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(commandData)
-            });
-            
-            const data = await response.json();
-            showMessage(data.message, data.success ? 'success' : 'danger');
-        } catch (error) {
-            showMessage('Errore nel test del comando', 'danger');
-            console.error('Errore:', error);
-        }
-    };
-
-    // Event listeners per la gestione comandi
-    document.addEventListener('DOMContentLoaded', function() {
-        // Carica comandi quando si apre la tab
-        const commandsTab = document.getElementById('tab-commands');
-        if (commandsTab) {
-            commandsTab.addEventListener('shown.bs.tab', function() {
-                loadCommands();
-            });
-        }
-        
-        // Form submission rimosso - ora si usa il pulsante onclick
-        
-        // Rimosso event listener per il checkbox commandCronEnabled e inizializzazione dell'interfaccia cron
-    });
-    
-    // ========== FUNZIONE GRAFICI STORICI ==========
-    
-    // Funzione per aprire il grafico storico
-    window.openChart = function(metric) {
-        // Crea il modal per il grafico
-        const modalHtml = `
-            <div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="chartModalLabel">
-                                <i class="bi bi-graph-up"></i> 
-                                ${getTranslation('charts.title')} - ${getTranslation('charts.metrics.' + metric)}
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="timeRange" class="form-label">${getTranslation('charts.time_range')}</label>
-                                    <select class="form-select" id="timeRange">
-                                        <option value="1h">${getTranslation('charts.ranges.1h')}</option>
-                                        <option value="6h">${getTranslation('charts.ranges.6h')}</option>
-                                        <option value="24h" selected>${getTranslation('charts.ranges.24h')}</option>
-                                        <option value="7d">${getTranslation('charts.ranges.7d')}</option>
-                                        <option value="30d">${getTranslation('charts.ranges.30d')}</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-end">
-                                    <button class="btn btn-primary me-2" onclick="refreshChart()">
-                                        <i class="bi bi-arrow-clockwise"></i> ${getTranslation('charts.refresh')}
-                                    </button>
-                                    <button class="btn btn-danger me-2" onclick="resetChartData()">
-                                        <i class="bi bi-trash"></i> ${getTranslation('charts.reset')}
-                                    </button>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
-                                        <label class="form-check-label" for="autoRefresh">
-                                            ${getTranslation('charts.auto_refresh')}
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chart-container" style="position: relative; height: 400px;">
-                                <canvas id="metricChart"></canvas>
-                            </div>
-                            <div class="mt-3">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h6 class="card-title">${getTranslation('charts.current_value')}</h6>
-                                                <h4 class="text-primary" id="currentValue">--</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h6 class="card-title">${getTranslation('charts.average')}</h6>
-                                                <h4 class="text-info" id="averageValue">--</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h6 class="card-title">${getTranslation('charts.maximum')}</h6>
-                                                <h4 class="text-warning" id="maxValue">--</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card text-center">
-                                            <div class="card-body">
-                                                <h6 class="card-title">${getTranslation('charts.minimum')}</h6>
-                                                <h4 class="text-success" id="minValue">--</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Rimuovi modal esistente se presente
-        const existingModal = document.getElementById('chartModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Aggiungi il modal al DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Inizializza il modal
-        const modal = new bootstrap.Modal(document.getElementById('chartModal'));
-        
-        // Variabili globali per il grafico
-        window.currentMetric = metric;
-        window.chartInstance = null;
-        window.chartRefreshInterval = null;
-        
-        // Mostra il modal
-        modal.show();
-        
-        // Inizializza il grafico quando il modal è completamente mostrato
-        document.getElementById('chartModal').addEventListener('shown.bs.modal', function() {
-            initChart();
-        });
-        
-        // Pulisci quando il modal viene chiuso
-        document.getElementById('chartModal').addEventListener('hidden.bs.modal', function() {
-            if (window.chartRefreshInterval) {
-                clearInterval(window.chartRefreshInterval);
-            }
-            if (window.chartInstance) {
-                window.chartInstance.destroy();
-            }
-            document.getElementById('chartModal').remove();
-        });
-        
-        // Event listener per il cambio di range temporale
-        document.getElementById('timeRange').addEventListener('change', function() {
-            refreshChart();
-        });
-        
-        // Event listener per l'auto-refresh
-        document.getElementById('autoRefresh').addEventListener('change', function() {
-            if (this.checked) {
-                startAutoRefresh();
-            } else {
-                stopAutoRefresh();
-            }
-        });
-    };
-    
-    // Funzione per inizializzare il grafico
-    function initChart() {
-        const ctx = document.getElementById('metricChart').getContext('2d');
-        
-        // Configurazione del grafico
-        const config = {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: getTranslation('charts.metrics.' + window.currentMetric),
-                    data: [],
-                    borderColor: getMetricColor(window.currentMetric),
-                    backgroundColor: getMetricColor(window.currentMetric, 0.1),
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: getMetricMaxValue(window.currentMetric)
-                    },
-                    x: {
-                        type: 'time',
-                        time: {
-                            displayFormats: {
-                                second: 'HH:mm:ss',
-                                minute: 'HH:mm',
-                                hour: 'HH:mm',
-                                day: 'DD/MM'
-                            },
-                            unit: 'second',
-                            stepSize: 10
-                        },
-                        ticks: {
-                            maxTicksLimit: 20,
-                            autoSkip: true
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context) {
-                                let value = context.parsed.y;
-                                let unit = getMetricUnit(window.currentMetric);
-                                return context.dataset.label + ': ' + value.toFixed(1) + unit;
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
-            }
-        };
-        
-        window.chartInstance = new Chart(ctx, config);
-        
-        // Carica i dati iniziali
-        refreshChart();
-        
-        // Avvia l'auto-refresh
-        startAutoRefresh();
-    }
-    
-    // Funzione per aggiornare il grafico
-    window.refreshChart = function() {
-        const timeRange = document.getElementById('timeRange').value;
-        
-        fetch(`/api/chart-data/${window.currentMetric}?range=${timeRange}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Aggiorna i dati del grafico
-                    window.chartInstance.data.labels = data.timestamps;
-                    window.chartInstance.data.datasets[0].data = data.values;
-                    window.chartInstance.update();
-                    
-                    // Aggiorna le statistiche
-                    updateStatistics(data.values);
-                } else {
-                    console.error('Errore nel caricamento dati grafico:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Errore nella richiesta dati grafico:', error);
-            });
-    };
-    
-    // Funzione per aggiornare le statistiche
-    function updateStatistics(values) {
-        if (values.length === 0) {
-            document.getElementById('currentValue').textContent = '--';
-            document.getElementById('averageValue').textContent = '--';
-            document.getElementById('maxValue').textContent = '--';
-            document.getElementById('minValue').textContent = '--';
-            return;
-        }
-        
-        const unit = getMetricUnit(window.currentMetric);
-        const current = values[values.length - 1];
-        const average = values.reduce((a, b) => a + b, 0) / values.length;
-        const max = Math.max(...values);
-        const min = Math.min(...values);
-        
-        document.getElementById('currentValue').textContent = current.toFixed(1) + unit;
-        document.getElementById('averageValue').textContent = average.toFixed(1) + unit;
-        document.getElementById('maxValue').textContent = max.toFixed(1) + unit;
-        document.getElementById('minValue').textContent = min.toFixed(1) + unit;
-    }
-    
-    // Funzione per avviare l'auto-refresh
-    function startAutoRefresh() {
-        if (window.chartRefreshInterval) {
-            clearInterval(window.chartRefreshInterval);
-        }
-        
-        window.chartRefreshInterval = setInterval(() => {
-            if (document.getElementById('autoRefresh').checked) {
-                refreshChart();
-            }
-        }, 10000); // Aggiorna ogni 10 secondi
-    }
-    
-    // Funzione per fermare l'auto-refresh
-    function stopAutoRefresh() {
-        if (window.chartRefreshInterval) {
-            clearInterval(window.chartRefreshInterval);
-            window.chartRefreshInterval = null;
-        }
-    }
-    
-    // Funzione per resettare i dati storici dei grafici
-    window.resetChartData = function() {
-        if (confirm(getTranslation('charts.reset_confirm'))) {
-            fetch('/api/reset-chart-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Mostra messaggio di successo
-                    showNotification(getTranslation('charts.reset_success'), 'success');
-                    // Aggiorna il grafico per mostrare i dati vuoti
-                    refreshChart();
-                } else {
-                    showNotification(getTranslation('charts.reset_error') + ': ' + (data.message || 'Errore sconosciuto'), 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Errore nel reset dei dati:', error);
-                showNotification(getTranslation('charts.reset_error'), 'error');
-            });
-        }
-    }
-    
-    // Funzione per ottenere il colore della metrica
-    function getMetricColor(metric, alpha = 1) {
-        const colors = {
-            'cpu': `rgba(54, 162, 235, ${alpha})`,
-            'ram': `rgba(255, 99, 132, ${alpha})`,
-            'temperature': `rgba(255, 206, 86, ${alpha})`
-        };
-        return colors[metric] || `rgba(75, 192, 192, ${alpha})`;
-    }
-    
-    // Funzione per ottenere il valore massimo della metrica
-    function getMetricMaxValue(metric) {
-        const maxValues = {
-            'cpu': 100,
-            'ram': 100,
-            'temperature': 100
-        };
-        return maxValues[metric] || 100;
-    }
-    
-    // Funzione per ottenere l'unità della metrica
-    function getMetricUnit(metric) {
-        const units = {
-            'cpu': '%',
-            'ram': '%',
-            'temperature': '°C'
-        };
-        return units[metric] || '';
-    }
 });
