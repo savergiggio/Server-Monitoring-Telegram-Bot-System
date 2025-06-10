@@ -1,12 +1,12 @@
 ## 🟢⚪🔴 *For English version, click here:* [README English](README.md)
-
-
+# [New 2.0 Version - Branch 2.0](https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System/releases/tag/2.1) ##
 ## 📚 Indice  
 - 🖥️ [Telegram Server Monitor – Panoramica](#️-telegram-server-monitor--panoramica)  
 - 🌐 [Funzionalità dell'interfaccia Web](#-funzionalità-dellinterfaccia-web)  
   - 📊 [Monitoraggio](#-monitoraggio)  
   - 🤖 [Impostazioni Telegram](#-telegram)  
-  - 🚨 [Avvisi di sistema](#-avvisi-di-sistema)  
+  - 🚨 [Avvisi di sistema](#-avvisi-di-sistema)
+  - 🖥️ [AI Camera RTSP Detection with Bot Alert](#-ai-detection)
   - 📂 [Punti di mount](#-punti-di-mount)  
   - 🌍 [Lingue](#-lingue)  
 - 🤖 [Funzionalità del Bot Telegram](#-funzionalità-del-bot-telegram)  
@@ -99,6 +99,12 @@ La GUI è organizzata in schede per una gestione semplice e chiara:
 </details>
 </div>
 
+### 🖥️ AI Camera RTSP Detection with Bot Alert
+- Rilevamento in tempo reale di persone/animali/oggetti in stream RTSP
+- Sensibilità e regole di allarme configurabili
+- Notifiche Telegram con istantanee
+- Attivazione/disattivazione via WebUI o Telegram
+  
 ### 📂 Punti di Mount
 - Gestisci i punti di mount usati dai comandi del bot Telegram:
   - `/upload` (directory da cui caricare file)
