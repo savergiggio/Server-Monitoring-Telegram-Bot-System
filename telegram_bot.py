@@ -12,9 +12,12 @@ import ipaddress
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from io import BytesIO
 
 import telegram
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, BotCommand, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 
 # Configurazione logging
@@ -45,9 +48,31 @@ FOLDER_CREATION_STATES = {}
 # Sistema di monitoraggio
 MONITORING_CONFIG_FILE = Path('/etc/ssh_monitor/monitoring_config.json')
 MONITORING_THREAD = None
+
+# AI Detection
+AI_DETECTION_ENABLED = os.environ.get('ENABLE_AI_DETECTION', 'false').lower() == 'true'
+
+if AI_DETECTION_ENABLED:
+    try:
+        from ai_detection import (
+            load_ai_config, save_ai_config, get_default_ai_config,
+            load_cameras_config, save_cameras_config, get_default_camera_config,
+            start_all_detections, stop_all_detections, restart_all_detections,
+            get_detection_status
+        )
+        logger.info("Modulo AI detection importato con successo")
+    except ImportError as e:
+        logger.error(f"Impossibile importare modulo AI detection: {e}")
+        AI_DETECTION_ENABLED = False
+    except Exception as e:
+        logger.error(f"Errore generico nell'importazione AI detection: {e}")
+        AI_DETECTION_ENABLED = False
+else:
+    logger.info(f"AI Detection disabilitato - ENABLE_AI_DETECTION: {os.environ.get('ENABLE_AI_DETECTION', 'not_set')}")
 MONITORING_ACTIVE = False
 ALERT_STATES = {}  # Stato corrente degli alert
 REMINDER_TIMERS = {}  # Timer per i reminder
+HYSTERESIS_STATES = {}  # Stato per l'isteresi: {parameter_name: {"start_time": datetime, "threshold_exceeded": bool}}
 
 # ----------------------------------------
 # Funzioni per il sistema di monitoraggio
@@ -61,21 +86,27 @@ def get_default_monitoring_config():
             "threshold": 80.0,
             "reminder_enabled": False,
             "reminder_interval": 300,  # 5 minuti in secondi
-            "reminder_unit": "seconds"
+            "reminder_unit": "seconds",
+            "hysteresis_enabled": False,
+            "hysteresis_duration": 5  # secondi
         },
         "ram_usage": {
             "enabled": False,
             "threshold": 85.0,
             "reminder_enabled": False,
             "reminder_interval": 300,
-            "reminder_unit": "seconds"
+            "reminder_unit": "seconds",
+            "hysteresis_enabled": False,
+            "hysteresis_duration": 5  # secondi
         },
         "cpu_temperature": {
             "enabled": False,
             "threshold": 70.0,
             "reminder_enabled": False,
             "reminder_interval": 600,
-            "reminder_unit": "seconds"
+            "reminder_unit": "seconds",
+            "hysteresis_enabled": False,
+            "hysteresis_duration": 5  # secondi
         },
         "disk_usage": {
             # Struttura: {"mount_point": {"enabled": bool, "threshold": float, "reminder_enabled": bool, "reminder_interval": int}}
@@ -165,10 +196,296 @@ def get_disk_usage_value(mount_point):
         logger.error(f"Errore nel recupero dell'utilizzo disco per {mount_point}: {e}")
         return None
 
+def get_top_processes_for_alert(parameter_name, num=7):
+    """Ottiene i processi più attivi in base al parametro specificato, inclusi i container Docker"""
+    try:
+        # Ottieni i processi del sistema
+        processes = []
+        process_io_before = {}  # Memorizza le statistiche IO prima della misurazione
+        
+        # Prima misurazione per i processi del sistema
+        for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent']):
+            try:
+                # Aggiorna la percentuale di CPU (richiede un intervallo)
+                if parameter_name in ["cpu_usage", "cpu_temperature"]:
+                    proc.info['cpu_percent'] = proc.cpu_percent(interval=0.1)
+                
+                # Salva le informazioni di IO iniziali per calcolare la velocità
+                if proc.pid > 0:
+                    try:
+                        p = psutil.Process(proc.pid)
+                        if hasattr(p, 'io_counters'):
+                            process_io_before[proc.pid] = p.io_counters()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, AttributeError):
+                        pass
+                
+                processes.append(proc.info)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        
+        # Ottieni i container Docker in esecuzione e le loro statistiche (prima misurazione)
+        docker_stats_before = {}
+        try:
+            # Verifica se Docker è disponibile
+            docker_check = subprocess.run(['docker', 'ps'], capture_output=True, text=True)
+            if docker_check.returncode == 0:
+                # Ottieni statistiche dei container Docker incluso NetIO
+                docker_stats = subprocess.run(
+                    ['docker', 'stats', '--no-stream', '--format', '{{.Name}}\t{{.CPUPerc}}\t{{.MemPerc}}\t{{.NetIO}}'], 
+                    capture_output=True, text=True
+                )
+                
+                if docker_stats.returncode == 0 and docker_stats.stdout.strip():
+                    for line in docker_stats.stdout.strip().split('\n'):
+                        if line.strip():
+                            parts = line.split('\t')
+                            if len(parts) >= 4:
+                                name = parts[0]
+                                docker_stats_before[name] = parts[3]  # Salva NetIO per calcolare la velocità
+        except Exception as e:
+            logger.error(f"Errore nel recupero delle statistiche Docker (prima misurazione): {e}")
+        
+        # Attendi un intervallo più lungo per misurare la velocità di rete dei container Docker
+        time.sleep(3)  # Aumentato a 3 secondi per dare più tempo ai container di accumulare statistiche di rete
+        
+        # Seconda misurazione per i processi del sistema
+        for i, proc_info in enumerate(processes):
+            pid = proc_info.get('pid', 0)
+            if pid > 0 and pid in process_io_before:
+                try:
+                    p = psutil.Process(pid)
+                    if hasattr(p, 'io_counters'):
+                        io_counters_after = p.io_counters()
+                        io_counters_before = process_io_before[pid]
+                        
+                        # Calcola la velocità di trasmissione in MB/s
+                        if hasattr(io_counters_after, 'write_bytes') and hasattr(io_counters_before, 'write_bytes'):
+                            net_io_up = (io_counters_after.write_bytes - io_counters_before.write_bytes) / (1024 * 1024)
+                            processes[i]['net_io_up'] = net_io_up
+                        else:
+                            processes[i]['net_io_up'] = 0.0
+                            
+                        # Calcola la velocità di ricezione in MB/s
+                        if hasattr(io_counters_after, 'read_bytes') and hasattr(io_counters_before, 'read_bytes'):
+                            net_io_down = (io_counters_after.read_bytes - io_counters_before.read_bytes) / (1024 * 1024)
+                            processes[i]['net_io_down'] = net_io_down
+                        else:
+                            processes[i]['net_io_down'] = 0.0
+                    else:
+                        # Fallback: utilizziamo le connessioni per stimare l'attività di rete
+                        try:
+                            connections = p.connections()
+                            if connections:
+                                # Stima approssimativa basata sul numero di connessioni
+                                processes[i]['net_io_up'] = len(connections) * 0.1  # Valore simbolico
+                                processes[i]['net_io_down'] = len(connections) * 0.1  # Valore simbolico
+                            else:
+                                processes[i]['net_io_up'] = 0.0
+                                processes[i]['net_io_down'] = 0.0
+                        except (AttributeError, psutil.Error):
+                            processes[i]['net_io_up'] = 0.0
+                            processes[i]['net_io_down'] = 0.0
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, AttributeError):
+                    processes[i]['net_io_up'] = 0.0
+                    processes[i]['net_io_down'] = 0.0
+            else:
+                processes[i]['net_io_up'] = 0.0
+                processes[i]['net_io_down'] = 0.0
+        
+        # Ottieni i container Docker in esecuzione e le loro statistiche (seconda misurazione)
+        docker_processes = []
+        try:
+            # Verifica se Docker è disponibile
+            if docker_check.returncode == 0:
+                # Ottieni statistiche dei container Docker incluso NetIO
+                docker_stats = subprocess.run(
+                    ['docker', 'stats', '--no-stream', '--format', '{{.Name}}\t{{.CPUPerc}}\t{{.MemPerc}}\t{{.NetIO}}'], 
+                    capture_output=True, text=True
+                )
+                
+                if docker_stats.returncode == 0 and docker_stats.stdout.strip():
+                    for line in docker_stats.stdout.strip().split('\n'):
+                        if line.strip():
+                            parts = line.split('\t')
+                            if len(parts) >= 4:
+                                name = parts[0]
+                                # Converti le percentuali da stringhe (es. "0.50%") a float (0.5)
+                                try:
+                                    cpu_perc = float(parts[1].replace('%', ''))
+                                    mem_perc = float(parts[2].replace('%', ''))
+                                    
+                                    # Calcola la velocità di rete in tempo reale
+                                    net_io_up = 0.0
+                                    net_io_down = 0.0
+                                    
+                                    # Estrai i valori di upload e download dalla stringa di NetIO (es. "1.2MB / 2.3MB")
+                                    net_io_after = parts[3]
+                                    net_io_before = docker_stats_before.get(name, "0B / 0B")
+                                    
+                                    # Debug: registra i valori NetIO prima e dopo per diagnosticare problemi
+                                    logger.debug(f"Docker {name} NetIO - Prima: {net_io_before}, Dopo: {net_io_after}")
+                                    
+                                    # Estrai i valori di upload dalla prima e seconda misurazione
+                                    try:
+                                        # Estrai i valori di upload
+                                        up_before_str = net_io_before.split('/')[0].strip()
+                                        up_after_str = net_io_after.split('/')[0].strip()
+                                        
+                                        # Converti in bytes
+                                        up_before = convert_to_bytes(up_before_str)
+                                        up_after = convert_to_bytes(up_after_str)
+                                        
+                                        # Calcola la velocità in MB/s
+                                        net_io_up = (up_after - up_before) / (1024 * 1024)
+                                        if net_io_up < 0:  # Gestisci il caso di contatore resettato
+                                            net_io_up = 0.0
+                                            
+                                        # Debug: registra i valori convertiti e la velocità calcolata
+                                        logger.debug(f"Docker {name} Upload - Prima: {up_before_str} ({up_before} bytes), Dopo: {up_after_str} ({up_after} bytes), Velocità: {net_io_up} MB/s")
+                                    except (ValueError, IndexError):
+                                        net_io_up = 0.0
+                                    
+                                    # Estrai i valori di download dalla prima e seconda misurazione
+                                    try:
+                                        # Estrai i valori di download
+                                        down_before_str = net_io_before.split('/')[1].strip()
+                                        down_after_str = net_io_after.split('/')[1].strip()
+                                        
+                                        # Converti in bytes
+                                        down_before = convert_to_bytes(down_before_str)
+                                        down_after = convert_to_bytes(down_after_str)
+                                        
+                                        # Calcola la velocità in MB/s
+                                        net_io_down = (down_after - down_before) / (1024 * 1024)
+                                        if net_io_down < 0:  # Gestisci il caso di contatore resettato
+                                            net_io_down = 0.0
+                                            
+                                        # Debug: registra i valori convertiti e la velocità calcolata
+                                        logger.debug(f"Docker {name} Download - Prima: {down_before_str} ({down_before} bytes), Dopo: {down_after_str} ({down_after} bytes), Velocità: {net_io_down} MB/s")
+                                    except (ValueError, IndexError):
+                                        net_io_down = 0.0
+                                    
+                                    # Crea un oggetto simile a quello dei processi di sistema
+                                    docker_processes.append({
+                                        'pid': 0,  # PID fittizio
+                                        'name': f"docker:{name}",  # Prefisso per identificare i container
+                                        'username': 'docker',
+                                        'cpu_percent': cpu_perc,
+                                        'memory_percent': mem_perc,
+                                        'net_io_up': net_io_up,
+                                        'net_io_down': net_io_down
+                                    })
+                                except ValueError:
+                                    # Ignora le righe con valori non validi
+                                    pass
+        except Exception as e:
+            logger.error(f"Errore nel recupero delle statistiche Docker (seconda misurazione): {e}")
+        
+        # Combina i processi del sistema e i container Docker
+        all_processes = processes + docker_processes
+        
+        # Mostra sempre 5 processi per tutti i tipi di alert
+        num = 3
+        
+        # Ordina in base al parametro
+        if parameter_name == "ram_usage":
+            sorted_processes = sorted(all_processes, key=lambda p: p['memory_percent'], reverse=True)[:num]
+            key_metric = 'memory_percent'
+        else:  # cpu_usage o cpu_temperature
+            sorted_processes = sorted(all_processes, key=lambda p: p['cpu_percent'], reverse=True)[:num]
+            key_metric = 'cpu_percent'
+        
+        # Formatta il messaggio secondo il nuovo formato richiesto
+        message = "Process   CPU%   RAM%   Tx(MB/s)   Rx(MB/s)\n"
+        message += "-------------------------------------------\n"
+        
+        for proc in sorted_processes:
+            # Estrai il nome del processo/container
+            name = proc['name']
+            
+            # Formattazione speciale per i container Docker
+            if name.startswith('docker:'):
+                container_name = name[7:]  # Rimuovi 'docker:'
+                formatted_name = f"d: {container_name}"
+            else:
+                # Per i processi normali
+                formatted_name = f"h: {name}"
+            
+            # Padding per allineare le colonne (20 caratteri totali)
+            name_padded = formatted_name[:20].ljust(20)
+            
+            # Ottieni i valori delle metriche
+            cpu_val = proc['cpu_percent']
+            ram_val = proc['memory_percent']
+            net_up = proc.get('net_io_up', 0.0)
+            net_down = proc.get('net_io_down', 0.0)
+            
+            # Formatta la riga con colonne allineate
+            message += f"{name_padded} {cpu_val:4.1f}%  {ram_val:5.1f}%  {net_up:3.1f}  {net_down:3.1f}\n"
+        
+        return message
+    except Exception as e:
+        logger.error(f"Errore nel recupero dei processi più attivi: {e}")
+        return "Informazioni sui processi non disponibili"
+
+
+def escape_markdown(text):
+    """Escapa i caratteri speciali per evitare errori di parsing Markdown"""
+    if not text:
+        return text
+    
+    # Solo i caratteri che causano realmente problemi di parsing in Telegram
+    # Manteniamo punti, trattini e parentesi per la leggibilità delle tabelle
+    special_chars = ['_', '*', '[', ']', '`', '~']
+    
+    # Escapa ogni carattere speciale
+    for char in special_chars:
+        text = text.replace(char, f'\\{char}')
+    
+    return text
+
+def convert_to_bytes(size_str):
+    """Converte una stringa di dimensione (es. '1.5MB') in bytes"""
+    try:
+        # Gestisci il caso di stringa vuota o None
+        if not size_str:
+            return 0.0
+            
+        # Normalizza la stringa per gestire vari formati
+        size_str = size_str.strip().upper()
+        
+        # Estrai il valore numerico
+        value = float(''.join(c for c in size_str if c.isdigit() or c == '.'))
+        
+        # Converti in base all'unità di misura (case insensitive)
+        if 'MB' in size_str or 'M' in size_str:
+            return value * 1024 * 1024
+        elif 'GB' in size_str or 'G' in size_str:
+            return value * 1024 * 1024 * 1024
+        elif 'KB' in size_str or 'K' in size_str:
+            return value * 1024
+        elif 'B' in size_str:
+            return value
+        else:
+            # Se non c'è unità di misura, assume bytes
+            return value
+    except (ValueError, AttributeError):
+        logger.debug(f"Errore nella conversione della dimensione: '{size_str}'")
+        return 0.0
+
 def send_alert_notification(parameter_name, current_value, threshold, is_alert=True):
     """Invia una notifica di alert o recovery via Telegram"""
     try:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        top_processes = ""
+        
+        # Ottieni i processi più attivi solo per gli alert (non per i recovery)
+        if is_alert and parameter_name in ["cpu_usage", "ram_usage", "cpu_temperature"]:
+            top_processes = get_top_processes_for_alert(parameter_name)
+            # Escapa i caratteri speciali nel contenuto, ma non le virgolette
+            top_processes = escape_markdown(top_processes)
+            # Racchiudi l'output in un blocco di codice per una migliore formattazione
+            top_processes = f"```\n{top_processes}```"
         
         if is_alert:
             # Alert: parametro sopra soglia
@@ -183,17 +500,20 @@ def send_alert_notification(parameter_name, current_value, threshold, is_alert=T
                 message = get_bot_translation("bot_messages.alert_messages.cpu_alert", 
                                             value=current_value, 
                                             threshold=threshold, 
-                                            timestamp=timestamp)
+                                            timestamp=timestamp,
+                                            top_processes=top_processes)
             elif parameter_name == "ram_usage":
                 message = get_bot_translation("bot_messages.alert_messages.ram_alert", 
                                             value=current_value, 
                                             threshold=threshold, 
-                                            timestamp=timestamp)
+                                            timestamp=timestamp,
+                                            top_processes=top_processes)
             elif parameter_name == "cpu_temperature":
                 message = get_bot_translation("bot_messages.alert_messages.temp_alert", 
                                             value=current_value, 
                                             threshold=threshold, 
-                                            timestamp=timestamp)
+                                            timestamp=timestamp,
+                                            top_processes=top_processes)
         else:
             # Recovery: parametro rientrato nella soglia
             if parameter_name.startswith("disk_"):
@@ -293,8 +613,8 @@ def setup_reminder_timer(parameter_name, config):
         logger.error(f"Errore nell'impostazione del timer per {parameter_name}: {e}")
 
 def check_parameter_threshold(parameter_name, current_value, config):
-    """Controlla se un parametro ha superato o rientrato nella soglia"""
-    global ALERT_STATES
+    """Controlla se un parametro ha superato o rientrato nella soglia con supporto per isteresi"""
+    global ALERT_STATES, HYSTERESIS_STATES
     
     try:
         if current_value is None:
@@ -302,11 +622,38 @@ def check_parameter_threshold(parameter_name, current_value, config):
             
         threshold = config.get("threshold", 0)
         was_in_alert = parameter_name in ALERT_STATES and ALERT_STATES[parameter_name]["active"]
+        hysteresis_enabled = config.get("hysteresis_enabled", False)
+        hysteresis_duration = config.get("hysteresis_duration", 5)
         
         # Controlla se il parametro supera la soglia
         if current_value > threshold:
             if not was_in_alert:
-                # Nuovo alert
+                # Gestione isteresi per nuovo potenziale alert
+                if hysteresis_enabled:
+                    current_time = datetime.now()
+                    
+                    if parameter_name not in HYSTERESIS_STATES:
+                        # Prima volta che supera la soglia, inizia il timer di isteresi
+                        HYSTERESIS_STATES[parameter_name] = {
+                            "start_time": current_time,
+                            "threshold_exceeded": True
+                        }
+                        logger.info(f"Isteresi avviata per {parameter_name}: valore {current_value} > soglia {threshold}, attendo {hysteresis_duration} secondi")
+                        return  # Non inviare ancora l'alert
+                    else:
+                        # Controlla se è passato abbastanza tempo
+                        elapsed_time = (current_time - HYSTERESIS_STATES[parameter_name]["start_time"]).total_seconds()
+                        if elapsed_time >= hysteresis_duration:
+                            # Tempo di isteresi superato, invia l'alert
+                            logger.info(f"Isteresi completata per {parameter_name}: {elapsed_time:.1f}s >= {hysteresis_duration}s, invio alert")
+                            # Rimuovi lo stato di isteresi
+                            del HYSTERESIS_STATES[parameter_name]
+                        else:
+                            # Tempo di isteresi non ancora superato
+                            logger.debug(f"Isteresi in corso per {parameter_name}: {elapsed_time:.1f}s < {hysteresis_duration}s")
+                            return  # Non inviare ancora l'alert
+                
+                # Nuovo alert (senza isteresi o isteresi completata)
                 ALERT_STATES[parameter_name] = {
                     "active": True,
                     "current_value": current_value,
@@ -341,6 +688,12 @@ def check_parameter_threshold(parameter_name, current_value, config):
                         REMINDER_TIMERS[parameter_name].cancel()
                         del REMINDER_TIMERS[parameter_name]
         else:
+            # Valore sotto la soglia
+            # Cancella stato di isteresi se presente
+            if parameter_name in HYSTERESIS_STATES:
+                logger.info(f"Valore rientrato sotto soglia per {parameter_name}, cancello isteresi")
+                del HYSTERESIS_STATES[parameter_name]
+            
             if was_in_alert:
                 # Recovery: parametro rientrato nella soglia
                 send_alert_notification(parameter_name, current_value, threshold, is_alert=False)
@@ -731,6 +1084,13 @@ def get_cpu_resources():
     
     message += f"\n*{get_bot_translation('bot_messages.resource_info.system_uptime')}:*\n{uptime_str}"
     
+    # Aggiungi top 5 processi CPU con formato tabellare
+    try:
+        top_processes = get_top_processes_for_alert("cpu_usage", 5)
+        message += f"\n\n*🔥 Top 5 Processi CPU:*\n```\n{top_processes}```"
+    except Exception as e:
+        logger.error(f"Errore nel recupero top processi CPU: {e}")
+    
     return message
 
 def get_ram_resources():
@@ -746,6 +1106,13 @@ def get_ram_resources():
     
     message += f"{get_bot_translation('bot_messages.resource_info.swap_total')}: {format_size(swap.total)}\n"
     message += f"{get_bot_translation('bot_messages.resource_info.swap_used')}: {format_size(swap.used)} ({swap.percent}%)\n"
+    
+    # Aggiungi top 5 processi RAM con formato tabellare
+    try:
+        top_processes = get_top_processes_for_alert("ram_usage", 5)
+        message += f"\n\n*🧠 Top 5 Processi RAM:*\n```\n{top_processes}```"
+    except Exception as e:
+        logger.error(f"Errore nel recupero top processi RAM: {e}")
     
     return message
 
@@ -1098,6 +1465,8 @@ def init_bot(token=None, chat_id=None):
             dp.add_handler(CommandHandler("res", command_risorse))      # Risorse sistema
             dp.add_handler(CommandHandler("start", command_start))      # Avvia bot
             dp.add_handler(CommandHandler("help", command_help))        # Aiuto
+            dp.add_handler(CommandHandler("commands", command_commands))  # Lista comandi configurati
+            dp.add_handler(CommandHandler("ai", command_ai_detection))  # Controllo AI Detection
             dp.add_handler(CommandHandler("reboot", command_reboot))    # Riavvia server
             dp.add_handler(CommandHandler("docker", command_docker))    # Gestione Docker
             dp.add_handler(CommandHandler("upload", command_upload))    # Upload file
@@ -1107,6 +1476,26 @@ def init_bot(token=None, chat_id=None):
             dp.add_handler(MessageHandler(Filters.document, handle_file_upload))
             # Handler per input di testo (per la creazione di cartelle)
             dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text_input))
+            
+            # Configura il menu dei comandi
+            commands = [
+                BotCommand("start", "Avvia il bot"),
+                BotCommand("help", "Mostra questo messaggio di aiuto"),
+                BotCommand("res", "Visualizza le risorse del sistema"),
+                BotCommand("docker", "Gestisci i container Docker"),
+                BotCommand("upload", "Carica files sul server"),
+                BotCommand("download", "Scarica files dal server"),
+                BotCommand("commands", "Esegui comandi configurati"),
+                BotCommand("ai", "Controlla AI Detection delle telecamere"),
+                BotCommand("reboot", "Riavvia il server (richiede conferma)")
+            ]
+            
+            # Imposta il menu dei comandi
+            try:
+                BOT_INSTANCE.set_my_commands(commands)
+                logger.info("Menu dei comandi configurato con successo")
+            except Exception as e:
+                logger.error(f"Errore nella configurazione del menu dei comandi: {e}")
             
             # Avvia il polling in un thread separato
             UPDATER.start_polling(drop_pending_updates=True)
@@ -1160,6 +1549,20 @@ def get_resource_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+def get_main_keyboard():
+    """Crea la tastiera personalizzata persistente con i comandi principali"""
+    keyboard = [
+        [KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.resources")), 
+         KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.docker"))],
+        [KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.upload")), 
+         KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.download"))],
+        [KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.commands")), 
+         KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.ai"))],
+        [KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.reboot")), 
+         KeyboardButton(get_bot_translation("bot_messages.keyboard_buttons.help"))]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+
 def command_risorse(update, context):
     """Handler per il comando /res"""
     message = get_bot_translation("bot_messages.choose_resource")
@@ -1171,12 +1574,161 @@ def command_risorse(update, context):
 def command_start(update, context):
     """Handler per il comando /start"""
     message = get_bot_translation("bot_messages.welcome")
-    update.message.reply_text(message)
+    update.message.reply_text(message, reply_markup=get_main_keyboard())
 
 def command_help(update, context):
     """Handler per il comando /help"""
     message = get_bot_translation("bot_messages.help")
-    update.message.reply_text(message)
+    update.message.reply_text(message, reply_markup=get_main_keyboard())
+
+def command_commands(update, context):
+    """Handler per il comando /commands - mostra la lista dei comandi configurati"""
+    try:
+        # Carica i comandi configurati
+        commands = load_commands_config()
+        
+        if not commands:
+            message = get_bot_translation("bot_messages.commands.no_commands")
+            update.message.reply_text(message)
+            return
+        
+        # Filtra solo i comandi abilitati
+        enabled_commands = {k: v for k, v in commands.items() if v.get('enabled', False)}
+        
+        if not enabled_commands:
+            message = get_bot_translation("bot_messages.commands.no_enabled_commands")
+            update.message.reply_text(message)
+            return
+        
+        # Crea la tastiera inline con i comandi
+        keyboard = []
+        for command_id, command in enabled_commands.items():
+            name = command.get('name', 'Comando senza nome')
+            description = command.get('description', '')
+            
+            # Limita la lunghezza del testo del pulsante
+            button_text = name[:30] + ('...' if len(name) > 30 else '')
+            
+            keyboard.append([InlineKeyboardButton(
+                button_text, 
+                callback_data=f"execute_command_{command_id}"
+            )])
+        
+        # Aggiungi pulsante di annullamento
+        keyboard.append([InlineKeyboardButton(
+            get_bot_translation("bot_messages.commands.cancel"), 
+            callback_data="cancel_action"
+        )])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        message = get_bot_translation("bot_messages.commands.title") + "\n\n"
+        message += get_bot_translation("bot_messages.commands.select_command")
+        
+        update.message.reply_text(
+            message,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Errore nel comando /commands: {e}")
+        message = get_bot_translation("bot_messages.commands.error")
+        update.message.reply_text(message)
+
+def command_ai_detection(update, context):
+    """Handler per il comando /ai - controllo AI Detection"""
+    logger.info(f"Comando /ai chiamato - AI_DETECTION_ENABLED: {AI_DETECTION_ENABLED}")
+    try:
+        if not AI_DETECTION_ENABLED:
+            logger.warning("AI Detection non abilitato, invio messaggio di errore")
+            message = get_bot_translation("bot_messages.ai_detection.not_available")
+            update.message.reply_text(message)
+            return
+        
+        # Ottieni lo stato corrente dell'AI detection
+        ai_config = load_ai_config()
+        global_enabled = ai_config.get('global_enabled', False)
+        
+        # Ottieni lo stato delle telecamere
+        try:
+            detection_status = get_detection_status()
+            active_cameras = len([cam for cam in detection_status.get('active_cameras', []) if cam.get('running', False)])
+            total_cameras = detection_status.get('total_cameras', 0)
+        except Exception as e:
+            logger.error(f"Errore nel recupero stato detection: {e}")
+            active_cameras = 0
+            total_cameras = 0
+        
+        # Costruisci il messaggio di stato
+        message = get_bot_translation("bot_messages.ai_detection.title") + "\n\n"
+        message += get_bot_translation("bot_messages.ai_detection.status_title") + "\n"
+        
+        if global_enabled:
+            message += get_bot_translation("bot_messages.ai_detection.global_enabled") + "\n"
+        else:
+            message += get_bot_translation("bot_messages.ai_detection.global_disabled") + "\n"
+        
+        message += get_bot_translation("bot_messages.ai_detection.cameras_active").format(count=active_cameras) + "\n"
+        message += get_bot_translation("bot_messages.ai_detection.cameras_total").format(count=total_cameras)
+        
+        # Costruisci la tastiera inline
+        keyboard = []
+        
+        # Pulsanti di controllo
+        if global_enabled:
+            keyboard.append([
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.start_button"), 
+                    callback_data="ai_start"
+                ),
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.stop_button"), 
+                    callback_data="ai_stop"
+                )
+            ])
+            keyboard.append([
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.restart_button"), 
+                    callback_data="ai_restart"
+                )
+            ])
+        
+        # Pulsante per abilitare/disabilitare globalmente
+        keyboard.append([
+            InlineKeyboardButton(
+                get_bot_translation("bot_messages.ai_detection.toggle_global_button"), 
+                callback_data="ai_toggle_global"
+            )
+        ])
+        
+        # Pulsante stato e torna al menu
+        keyboard.append([
+            InlineKeyboardButton(
+                get_bot_translation("bot_messages.ai_detection.status_button"), 
+                callback_data="ai_status"
+            )
+        ])
+        
+        keyboard.append([
+            InlineKeyboardButton(
+                get_bot_translation("bot_messages.ai_detection.back_button"), 
+                callback_data="cancel_action"
+            )
+        ])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        update.message.reply_text(
+            message,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Errore nel comando /ai: {e}")
+        message = get_bot_translation("bot_messages.ai_detection.not_available")
+        update.message.reply_text(message)
 
 def command_download(update, context):
     """Handler per il comando /download per scaricare files dal server"""
@@ -1474,6 +2026,33 @@ def handle_text_input(update, context):
     
     # Identifica l'utente
     chat_id = update.effective_chat.id
+    text = update.message.text
+    
+    # Gestione dei bottoni della tastiera personalizzata
+    if text == get_bot_translation("bot_messages.keyboard_buttons.resources"):
+        command_risorse(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.docker"):
+        command_docker(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.upload"):
+        command_upload(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.download"):
+        command_download(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.commands"):
+        command_commands(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.reboot"):
+        command_reboot(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.help"):
+        command_help(update, context)
+        return
+    elif text == get_bot_translation("bot_messages.keyboard_buttons.ai"):
+        command_ai_detection(update, context)
+        return
     
     # Gestione creazione nuove cartelle
     if chat_id in FOLDER_CREATION_STATES:
@@ -1707,6 +2286,21 @@ def get_back_button_keyboard():
     keyboard = [[InlineKeyboardButton(get_bot_translation("bot_messages.back"), callback_data="back_to_resources")]]
     return InlineKeyboardMarkup(keyboard)
 
+def get_resource_button_keyboard(resource_type=None):
+    """Crea una tastiera con pulsante Torna indietro e opzionalmente pulsante Grafico"""
+    keyboard = []
+    
+    # Se è una risorsa che supporta i grafici (CPU o RAM), aggiungi il pulsante Grafico
+    if resource_type in ['cpu', 'ram']:
+        keyboard.append([
+            InlineKeyboardButton(get_bot_translation("charts.graph_button"), callback_data=f"graph_{resource_type}"),
+            InlineKeyboardButton(get_bot_translation("bot_messages.back"), callback_data="back_to_resources")
+        ])
+    else:
+        keyboard.append([InlineKeyboardButton(get_bot_translation("bot_messages.back"), callback_data="back_to_resources")])
+    
+    return InlineKeyboardMarkup(keyboard)
+
 def button_callback(update, context):
     """Gestisce i callback dai pulsanti inline"""
     query = update.callback_query
@@ -1719,12 +2313,12 @@ def button_callback(update, context):
     if callback_data == "cpu_resources":
         # Mostra risorse CPU
         response = get_cpu_resources()
-        query.edit_message_text(text=response, reply_markup=get_back_button_keyboard(), parse_mode="Markdown")
+        query.edit_message_text(text=response, reply_markup=get_resource_button_keyboard('cpu'), parse_mode="Markdown")
         
     elif callback_data == "ram_resources":
         # Mostra risorse RAM
         response = get_ram_resources()
-        query.edit_message_text(text=response, reply_markup=get_back_button_keyboard(), parse_mode="Markdown")
+        query.edit_message_text(text=response, reply_markup=get_resource_button_keyboard('ram'), parse_mode="Markdown")
         
     elif callback_data == "disk_resources":
         # Mostra risorse disco
@@ -1770,6 +2364,10 @@ def button_callback(update, context):
     elif callback_data == "confirm_reboot":
         handle_reboot(query, context)
         
+    # Gestione callback per l'esecuzione dei comandi configurati
+    elif callback_data.startswith("execute_command_"):
+        handle_execute_command(query, context, callback_data)
+    
     # Gestione callback per l'annullamento di azioni
     elif callback_data == "cancel_action":
         query.edit_message_text(get_bot_translation("bot_messages.operation_cancelled"))
@@ -1780,6 +2378,24 @@ def button_callback(update, context):
             get_bot_translation("bot_messages.choose_resource"),
             reply_markup=get_resource_keyboard()
         )
+    
+    # Gestione callback per AI Detection
+    elif callback_data.startswith("ai_"):
+        handle_ai_detection_callback(query, context, callback_data)
+    
+    # Gestione callback per i grafici
+    elif callback_data.startswith("graph_"):
+        # Controlla se è una selezione di intervallo temporale
+        if "_30m" in callback_data or "_1h" in callback_data or "_6h" in callback_data or "_24h" in callback_data or "_3d" in callback_data:
+            # Estrai resource_type e time_range
+            parts = callback_data.replace("graph_", "").rsplit("_", 1)
+            resource_type = parts[0]
+            time_range = parts[1]
+            handle_graph_generation(query, context, resource_type, time_range)
+        else:
+            # Richiesta iniziale del grafico (mostra menu intervalli)
+            resource_type = callback_data.replace("graph_", "")
+            handle_graph_request(query, context, resource_type)
         
     # Gestione callback per l'upload di file
     elif callback_data.startswith("browse_dir_"):
@@ -1824,6 +2440,172 @@ def button_callback(update, context):
         handle_download_page_navigation(query, context, 1)
     elif callback_data == "download_page_info":
         pass  # Non fare nulla
+
+def handle_ai_detection_callback(query, context, callback_data):
+    """Gestisce i callback per AI Detection"""
+    try:
+        if not AI_DETECTION_ENABLED:
+            query.edit_message_text(get_bot_translation("bot_messages.ai_detection.not_available"))
+            return
+        
+        if callback_data == "ai_start":
+            # Avvia AI detection
+            try:
+                result = start_all_detections()
+                if result:  # start_all_detections restituisce True se almeno una camera è stata avviata
+                    message = get_bot_translation("bot_messages.ai_detection.started")
+                else:
+                    message = get_bot_translation("bot_messages.ai_detection.start_error")
+            except Exception as e:
+                logger.error(f"Errore nell'avvio AI detection: {e}")
+                message = get_bot_translation("bot_messages.ai_detection.start_error")
+            
+            # Aggiungi pulsante per tornare al menu AI
+            keyboard = [[
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.back_to_menu"), 
+                    callback_data="ai_menu"
+                )
+            ]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_text(message, reply_markup=reply_markup)
+            
+        elif callback_data == "ai_stop":
+            # Ferma AI detection
+            try:
+                stop_all_detections()  # stop_all_detections non restituisce un valore significativo
+                message = get_bot_translation("bot_messages.ai_detection.stopped")
+            except Exception as e:
+                logger.error(f"Errore nel fermare AI detection: {e}")
+                message = get_bot_translation("bot_messages.ai_detection.stop_error")
+            
+            # Aggiungi pulsante per tornare al menu AI
+            keyboard = [[
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.back_to_menu"), 
+                    callback_data="ai_menu"
+                )
+            ]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_text(message, reply_markup=reply_markup)
+            
+        elif callback_data == "ai_restart":
+            # Riavvia AI detection
+            try:
+                result = restart_all_detections()
+                if result:  # restart_all_detections restituisce il risultato di start_all_detections
+                    message = get_bot_translation("bot_messages.ai_detection.restarted")
+                else:
+                    message = get_bot_translation("bot_messages.ai_detection.restart_error")
+            except Exception as e:
+                logger.error(f"Errore nel riavvio AI detection: {e}")
+                message = get_bot_translation("bot_messages.ai_detection.restart_error")
+            
+            # Aggiungi pulsante per tornare al menu AI
+            keyboard = [[
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.back_to_menu"), 
+                    callback_data="ai_menu"
+                )
+            ]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_text(message, reply_markup=reply_markup)
+            
+        elif callback_data == "ai_toggle_global":
+            # Abilita/disabilita globalmente AI detection
+            try:
+                ai_config = load_ai_config()
+                current_state = ai_config.get('global_enabled', False)
+                ai_config['global_enabled'] = not current_state
+                save_ai_config(ai_config)
+                
+                if ai_config['global_enabled']:
+                    message = get_bot_translation("bot_messages.ai_detection.global_enabled_msg")
+                else:
+                    message = get_bot_translation("bot_messages.ai_detection.global_disabled_msg")
+                    # Se disabilitato, ferma anche tutte le detection
+                    stop_all_detections()
+                    
+            except Exception as e:
+                logger.error(f"Errore nel toggle globale AI detection: {e}")
+                message = get_bot_translation("bot_messages.ai_detection.toggle_error")
+            
+            # Aggiungi pulsante per tornare al menu AI
+            keyboard = [[
+                InlineKeyboardButton(
+                    get_bot_translation("bot_messages.ai_detection.back_to_menu"), 
+                    callback_data="ai_menu"
+                )
+            ]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_text(message, reply_markup=reply_markup)
+            
+        elif callback_data == "ai_status":
+            # Mostra stato dettagliato
+            try:
+                ai_config = load_ai_config()
+                global_enabled = ai_config.get('global_enabled', False)
+                
+                detection_status = get_detection_status()
+                active_cameras = len([cam for cam in detection_status.get('active_cameras', []) if cam.get('running', False)])
+                total_cameras = detection_status.get('total_cameras', 0)
+                
+                message = get_bot_translation("bot_messages.ai_detection.status_detailed") + "\n\n"
+                
+                if global_enabled:
+                    message += get_bot_translation("bot_messages.ai_detection.global_enabled") + "\n"
+                else:
+                    message += get_bot_translation("bot_messages.ai_detection.global_disabled") + "\n"
+                
+                message += get_bot_translation("bot_messages.ai_detection.cameras_active").format(count=active_cameras) + "\n"
+                message += get_bot_translation("bot_messages.ai_detection.cameras_total").format(count=total_cameras) + "\n\n"
+                
+                # Aggiungi dettagli di tutte le telecamere
+                cameras_list = detection_status.get('active_cameras', [])
+                if cameras_list:
+                    message += get_bot_translation("bot_messages.ai_detection.active_cameras_list") + "\n"
+                    for cam in cameras_list:
+                        camera_name = cam.get('name', f"Camera {cam.get('camera_id', 'Unknown')}")
+                        camera_status = cam.get('status', 'Unknown')
+                        status_icon = "✅" if cam.get('running', False) else "❌"
+                        message += f"• {status_icon} {camera_name} - {camera_status}\n"
+                
+                # Pulsante per tornare al menu AI
+                keyboard = [[
+                    InlineKeyboardButton(
+                        get_bot_translation("bot_messages.ai_detection.back_to_menu"), 
+                        callback_data="ai_menu"
+                    )
+                ]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                query.edit_message_text(message, reply_markup=reply_markup, parse_mode="Markdown")
+                
+            except Exception as e:
+                logger.error(f"Errore nel recupero stato AI detection: {e}")
+                message = get_bot_translation("bot_messages.ai_detection.status_error")
+                # Aggiungi pulsante per tornare al menu AI
+                keyboard = [[
+                    InlineKeyboardButton(
+                        get_bot_translation("bot_messages.ai_detection.back_to_menu"), 
+                        callback_data="ai_menu"
+                    )
+                ]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(message, reply_markup=reply_markup)
+                
+        elif callback_data == "ai_menu":
+            # Torna al menu principale AI
+            # Simula il comando /ai
+            from types import SimpleNamespace
+            fake_update = SimpleNamespace()
+            fake_update.message = query.message
+            fake_update.effective_chat = query.message.chat
+            command_ai_detection(fake_update, context)
+            
+    except Exception as e:
+        logger.error(f"Errore nel callback AI detection: {e}")
+        query.edit_message_text(get_bot_translation("bot_messages.ai_detection.not_available"))
 
 def handle_download_mount_selection(query, context):
     """Gestisce la selezione del mount point per il download"""
@@ -2318,11 +3100,20 @@ def handle_docker_callback(query, context, callback_data):
                 port_unmapped_text = get_bot_translation("bot_messages.docker_details.port_unmapped_text")
                 message += f"\n{ports_label}\n"
                 message += f"{'_'*20}\n"
+                
+                # Ottieni l'IP dell'host
+                host_system_ip = get_host_ip() or get_local_ip()
+                
                 for port, bindings in ports.items():
                     if bindings:
                         for binding in bindings:
                             host_ip = binding.get('HostIp', '0.0.0.0')
                             host_port = binding.get('HostPort', 'N/A')
+                            
+                            # Sostituisci 0.0.0.0 con l'IP dell'host
+                            if host_ip == '0.0.0.0' and host_system_ip:
+                                host_ip = host_system_ip
+                            
                             message += f"  {port_mapped_icon} {port} → {host_ip}:{host_port}\n"
                     else:
                         message += f"  {port_unmapped_icon} {port} {port_unmapped_text}\n"
@@ -2910,7 +3701,99 @@ def send_telegram_message(message, parse_mode="Markdown", chat_id=None):
         return True
     except Exception as e:
         logger.error(f"Errore nell'invio del messaggio Telegram: {e}")
+        
+        # Se l'errore è relativo al parsing Markdown, riprova senza formattazione
+        if "parse entities" in str(e).lower() and parse_mode == "Markdown":
+            try:
+                logger.info("Tentativo di invio senza formattazione Markdown")
+                BOT_INSTANCE.send_message(chat_id=target_chat_id, text=message, parse_mode=None)
+                return True
+            except Exception as e2:
+                logger.error(f"Errore anche senza formattazione Markdown: {e2}")
+        
         return False
+
+def send_telegram_photo(photo_path, caption="", chat_id=None):
+    """Invia una foto tramite il bot Telegram"""
+    global BOT_INSTANCE, CHAT_ID
+    
+    # Usa il chat_id fornito o quello globale
+    target_chat_id = chat_id or CHAT_ID
+    
+    if not BOT_INSTANCE or not target_chat_id:
+        logger.error("Bot Telegram non inizializzato o chat_id non impostato")
+        return False
+    
+    try:
+        # Verifica che il file esista
+        if not os.path.exists(photo_path):
+            logger.error(f"File foto non trovato: {photo_path}")
+            return False
+        
+        # Limita la lunghezza della caption a 1024 caratteri
+        if len(caption) > 1024:
+            caption = caption[:1021] + "..."
+        
+        with open(photo_path, 'rb') as photo_file:
+            BOT_INSTANCE.send_photo(
+                chat_id=target_chat_id,
+                photo=photo_file,
+                caption=caption,
+                parse_mode="Markdown" if caption else None
+            )
+        
+        logger.debug(f"Foto inviata con successo: {photo_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Errore nell'invio della foto Telegram: {e}")
+        return False
+
+def send_telegram_message_with_photo(message, photo_bytes, parse_mode="Markdown", chat_id=None):
+    """Invia un messaggio con foto tramite il bot Telegram"""
+    global BOT_INSTANCE, CHAT_ID
+    
+    # Usa il chat_id fornito o quello globale
+    target_chat_id = chat_id or CHAT_ID
+    
+    if not BOT_INSTANCE or not target_chat_id:
+        logger.error("Bot Telegram non inizializzato o chat_id non impostato")
+        return False
+    
+    try:
+        # Crea oggetto BytesIO dal buffer
+        from io import BytesIO
+        photo_buffer = BytesIO(photo_bytes)
+        
+        # Determina l'estensione del file in base ai primi byte (magic numbers)
+        # PNG: inizia con \x89PNG\r\n\x1a\n
+        # JPEG: inizia con \xff\xd8\xff
+        if photo_bytes[:8].startswith(b'\x89PNG\r\n\x1a\n'):
+            photo_buffer.name = 'detection.png'
+            logger.info("Invio immagine PNG a Telegram (rilevato da magic numbers)")
+        elif photo_bytes[:3] == b'\xff\xd8\xff':
+            photo_buffer.name = 'detection.jpg'
+            logger.info("Invio immagine JPEG a Telegram (rilevato da magic numbers)")
+        else:
+            # Se non riusciamo a determinare il formato, assumiamo JPEG come fallback
+            photo_buffer.name = 'detection.jpg'
+            logger.warning("Formato immagine non riconosciuto, assumo JPEG")
+        
+        # Limita la lunghezza del caption a 1024 caratteri
+        if len(message) > 1024:
+            message = message[:1021] + "..."
+        
+        BOT_INSTANCE.send_photo(
+            chat_id=target_chat_id, 
+            photo=photo_buffer, 
+            caption=message, 
+            parse_mode=parse_mode
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Errore nell'invio della foto Telegram: {e}")
+        # Fallback: invia solo il messaggio
+        return send_telegram_message(message, parse_mode, chat_id)
 
 def get_file_browser_keyboard(directory, file_list=None):
     """Crea una tastiera per la navigazione dei file"""
@@ -3027,11 +3910,436 @@ def get_bot_language():
     global current_bot_language
     return current_bot_language
 
+# ========== FUNZIONI DI SUPPORTO PER COMANDI ==========
+
+def load_commands_config():
+    """Carica la configurazione dei comandi dal file JSON"""
+    commands_file = Path('/etc/ssh_monitor/commands_config.json')
+    
+    if commands_file.exists():
+        try:
+            with open(commands_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Errore nel caricamento configurazione comandi: {e}")
+    
+    return {}
+
+def handle_execute_command(query, context, callback_data):
+    """Gestisce l'esecuzione di un comando configurato"""
+    try:
+        # Estrai l'ID del comando dal callback_data
+        command_id = callback_data.replace("execute_command_", "")
+        
+        # Carica i comandi configurati
+        commands = load_commands_config()
+        
+        if command_id not in commands:
+            query.edit_message_text(get_bot_translation("bot_messages.commands.command_not_found"))
+            return
+        
+        command = commands[command_id]
+        
+        # Verifica che il comando sia abilitato
+        if not command.get('enabled', False):
+            query.edit_message_text(get_bot_translation("bot_messages.commands.command_disabled"))
+            return
+        
+        # Mostra messaggio di esecuzione in corso
+        command_name = command.get('name', 'Comando senza nome')
+        executing_message = get_bot_translation("bot_messages.commands.executing", command_name=command_name)
+        query.edit_message_text(executing_message)
+        
+        # Esegui il comando
+        script_path = command.get('script_path', '')
+        
+        if not script_path or not os.path.exists(script_path):
+            error_message = get_bot_translation("bot_messages.commands.script_not_found")
+            query.edit_message_text(error_message)
+            return
+        
+        # Esegui lo script
+        result = execute_script_telegram(script_path)
+        
+        if result['success']:
+            # Comando eseguito con successo
+            output = result.get('output', '').strip()
+            
+            # Limita l'output a 1500 caratteri per evitare problemi con Telegram
+            if len(output) > 1500:
+                output = output[:1500] + "\n\n[Output troncato...]"
+            
+            # Escape dei caratteri speciali nell'output per Markdown
+            if output:
+                # Rimuovi i backticks dall'output per evitare conflitti
+                output = output.replace('```', '\`\`\`')
+            
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            success_message = get_bot_translation("bot_messages.commands.execution_success", 
+                                                command_name=command_name,
+                                                description=command.get('description', ''),
+                                                timestamp=timestamp,
+                                                output=output or 'Nessun output')
+            
+            query.edit_message_text(success_message, parse_mode="Markdown")
+        else:
+            # Errore nell'esecuzione
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            error_message = get_bot_translation("bot_messages.commands.execution_error", 
+                                              command_name=command_name, 
+                                              error=result.get('error', 'Errore sconosciuto'),
+                                              timestamp=timestamp)
+            query.edit_message_text(error_message, parse_mode="Markdown")
+        
+    except Exception as e:
+        logger.error(f"Errore nell'esecuzione comando: {e}")
+        query.edit_message_text(get_bot_translation("bot_messages.commands.general_error"))
+
+def execute_script_telegram(script_path):
+    """Esegue uno script per il bot Telegram e restituisce il risultato"""
+    try:
+        # Verifica che il file sia eseguibile
+        if not os.access(script_path, os.X_OK):
+            return {
+                'success': False,
+                'error': 'Script non eseguibile'
+            }
+        
+        # Esegui script con timeout ridotto per Telegram
+        result = subprocess.run(
+            [script_path],
+            capture_output=True,
+            text=True,
+            timeout=120,  # 2 minuti di timeout per Telegram
+            cwd=os.path.dirname(script_path)
+        )
+        
+        if result.returncode == 0:
+            return {
+                'success': True,
+                'output': result.stdout
+            }
+        else:
+            return {
+                'success': False,
+                'error': result.stderr or f'Exit code: {result.returncode}'
+            }
+    
+    except subprocess.TimeoutExpired:
+        return {
+            'success': False,
+            'error': 'Timeout esecuzione script (2 minuti)'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def handle_graph_request(query, context, resource_type):
+    """Gestisce la richiesta di generazione e invio di un grafico"""
+    try:
+        # Mostra il menu di selezione dell'intervallo temporale
+        keyboard = [
+            [InlineKeyboardButton(f"⏰ {get_bot_translation('charts.ranges.30m')}", callback_data=f"graph_{resource_type}_30m")],
+        [InlineKeyboardButton(f"🕐 {get_bot_translation('charts.ranges.1h')}", callback_data=f"graph_{resource_type}_1h")],
+        [InlineKeyboardButton(f"🕕 {get_bot_translation('charts.ranges.6h')}", callback_data=f"graph_{resource_type}_6h")],
+        [InlineKeyboardButton(f"📅 {get_bot_translation('charts.ranges.24h')}", callback_data=f"graph_{resource_type}_24h")],
+        [InlineKeyboardButton(f"📆 {get_bot_translation('charts.ranges.3d')}", callback_data=f"graph_{resource_type}_3d")],
+            [InlineKeyboardButton(get_bot_translation("back"), callback_data=f"resource_{resource_type}")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        query.edit_message_text(
+            get_bot_translation("charts.select_time_range"),
+            reply_markup=reply_markup
+        )
+        
+    except Exception as e:
+        logger.error(f"Errore nella selezione intervallo grafico {resource_type}: {e}")
+        query.edit_message_text(
+            get_bot_translation("charts.graph_error"),
+            reply_markup=get_resource_button_keyboard(resource_type)
+        )
+
+def handle_graph_generation(query, context, resource_type, time_range):
+    """Gestisce la generazione effettiva del grafico con l'intervallo temporale specificato"""
+    try:
+        # Invia messaggio di attesa
+        query.edit_message_text(get_bot_translation("charts.graph_generating"))
+        
+        # Genera il grafico con l'intervallo temporale specificato
+        chart_image = generate_chart_image(resource_type, time_range)
+        
+        if chart_image is None:
+            query.edit_message_text(
+                get_bot_translation("charts.graph_error"),
+                reply_markup=get_resource_button_keyboard(resource_type)
+            )
+            return
+        
+        # Invia il grafico
+        chat_id = query.message.chat_id
+        
+        # Determina il caption in base al tipo di risorsa e intervallo
+        time_label = get_bot_translation(f'charts.ranges.{time_range}').lower()
+        
+        if resource_type == 'cpu':
+            caption = get_bot_translation('charts.captions.cpu_temp').format(time_range=time_label) + "\n\n" + get_bot_translation('charts.captions.data_source')
+        elif resource_type == 'ram':
+            caption = get_bot_translation('charts.captions.ram').format(time_range=time_label) + "\n\n" + get_bot_translation('charts.captions.data_source')
+        else:
+            caption = f"📊 Grafico {resource_type.upper()} - {time_label}"
+        
+        # Invia la foto
+        context.bot.send_photo(
+            chat_id=chat_id,
+            photo=chart_image,
+            caption=caption
+        )
+        
+        # Aggiorna il messaggio originale
+        if resource_type == 'cpu':
+            response = get_cpu_resources()
+        elif resource_type == 'ram':
+            response = get_ram_resources()
+        else:
+            response = "Risorsa non supportata"
+            
+        query.edit_message_text(
+            text=response + "\n\n" + get_bot_translation("charts.graph_sent"),
+            reply_markup=get_resource_button_keyboard(resource_type),
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Errore nell'invio del grafico {resource_type}: {e}")
+        query.edit_message_text(
+            get_bot_translation("charts.graph_error"),
+            reply_markup=get_resource_button_keyboard(resource_type)
+        )
+
+def generate_chart_image(resource_type, time_range='24h'):
+    """Genera un grafico dettagliato per la risorsa specificata e restituisce un BytesIO object"""
+    try:
+        # Configura matplotlib per non usare GUI
+        plt.switch_backend('Agg')
+        
+        # Carica i dati storici
+        historical_file = '/var/lib/ssh_monitor/historical_metrics.json'
+        if not os.path.exists(historical_file):
+            logger.error(f"File dati storici non trovato: {historical_file}")
+            return None
+            
+        with open(historical_file, 'r') as f:
+            data = json.load(f)
+        
+        # Calcola il timestamp di cutoff basato sull'intervallo temporale
+        now = datetime.now()
+        time_deltas = {
+            '30m': timedelta(minutes=30),
+            '1h': timedelta(hours=1),
+            '6h': timedelta(hours=6),
+            '24h': timedelta(hours=24),
+            '3d': timedelta(days=3)
+        }
+        
+        cutoff_time = now - time_deltas.get(time_range, timedelta(hours=24))
+        
+        def filter_data_by_time(data_list):
+            """Filtra i dati in base all'intervallo temporale selezionato"""
+            filtered_data = []
+            for item in data_list:
+                try:
+                    item_time = datetime.fromisoformat(item['timestamp'])
+                    if item_time >= cutoff_time:
+                        filtered_data.append(item)
+                except (ValueError, KeyError):
+                    continue
+            return filtered_data
+        
+        # Prepara i dati in base al tipo di risorsa
+        if resource_type == 'cpu':
+            cpu_data = data.get('cpu', [])
+            temp_data = data.get('temperature', [])
+            
+            if not cpu_data and not temp_data:
+                logger.error("Nessun dato CPU o temperatura disponibile")
+                return None
+                
+            # Crea il grafico con due subplot
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+            fig.suptitle(get_bot_translation('charts.titles.cpu_temp_detailed'), fontsize=16, fontweight='bold')
+            
+            # Grafico CPU
+            if cpu_data:
+                cpu_data = filter_data_by_time(cpu_data)
+                if cpu_data:
+                    timestamps = [datetime.fromisoformat(item['timestamp']) for item in cpu_data]
+                    values = [item['value'] for item in cpu_data]
+                
+                # Calcola statistiche
+                current_val = values[-1] if values else 0
+                avg_val = sum(values) / len(values) if values else 0
+                min_val = min(values) if values else 0
+                max_val = max(values) if values else 0
+                
+                ax1.plot(timestamps, values, color='#007bff', linewidth=2, label='CPU %')
+                ax1.axhline(y=avg_val, color='orange', linestyle='--', alpha=0.7, label=f'{get_bot_translation("charts.labels.average")}: {avg_val:.1f}%')
+            ax1.axhline(y=max_val, color='red', linestyle=':', alpha=0.7, label=f'{get_bot_translation("charts.labels.maximum")}: {max_val:.1f}%')
+            ax1.axhline(y=min_val, color='green', linestyle=':', alpha=0.7, label=f'{get_bot_translation("charts.labels.minimum")}: {min_val:.1f}%')
+            
+            title_cpu = f'{get_bot_translation("charts.labels.cpu_usage")} - {get_bot_translation("charts.labels.current")}: {current_val:.1f}% | {get_bot_translation("charts.labels.average")}: {avg_val:.1f}% | {get_bot_translation("charts.labels.minimum")}: {min_val:.1f}% | {get_bot_translation("charts.labels.maximum")}: {max_val:.1f}%'
+            ax1.set_title(title_cpu, fontweight='bold', fontsize=12)
+            ax1.set_ylabel('Percentuale (%)')
+            ax1.grid(True, alpha=0.3)
+            ax1.legend(loc='upper right')
+            
+            # Formatta l'asse X per le date con più dettagli
+            if len(timestamps) > 0:
+                if time_range == '30m':
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+                    ax1.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+                elif time_range == '1h':
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax1.xaxis.set_major_locator(mdates.MinuteLocator(interval=10))
+                elif time_range == '6h':
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+                elif time_range == '24h':
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+                else:  # 3d
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+                    ax1.xaxis.set_major_locator(mdates.HourLocator(interval=6))
+            plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45)
+            
+            # Grafico Temperatura
+            if temp_data:
+                temp_data = filter_data_by_time(temp_data)
+                if temp_data:
+                    timestamps = [datetime.fromisoformat(item['timestamp']) for item in temp_data]
+                    values = [item['value'] for item in temp_data]
+                
+                # Calcola statistiche
+                current_val = values[-1] if values else 0
+                avg_val = sum(values) / len(values) if values else 0
+                min_val = min(values) if values else 0
+                max_val = max(values) if values else 0
+                
+                ax2.plot(timestamps, values, color='#dc3545', linewidth=2, label='Temperatura °C')
+                ax2.axhline(y=avg_val, color='orange', linestyle='--', alpha=0.7, label=f'{get_bot_translation("charts.labels.average")}: {avg_val:.1f}°C')
+            ax2.axhline(y=max_val, color='red', linestyle=':', alpha=0.7, label=f'{get_bot_translation("charts.labels.maximum")}: {max_val:.1f}°C')
+            ax2.axhline(y=min_val, color='green', linestyle=':', alpha=0.7, label=f'{get_bot_translation("charts.labels.minimum")}: {min_val:.1f}°C')
+            
+            title_temp = f'{get_bot_translation("charts.labels.cpu_temperature")} - {get_bot_translation("charts.labels.current")}: {current_val:.1f}°C | {get_bot_translation("charts.labels.average")}: {avg_val:.1f}°C | {get_bot_translation("charts.labels.minimum")}: {min_val:.1f}°C | {get_bot_translation("charts.labels.maximum")}: {max_val:.1f}°C'
+            ax2.set_title(title_temp, fontweight='bold', fontsize=12)
+            ax2.set_ylabel('Temperatura (°C)')
+            ax2.set_xlabel('Tempo')
+            ax2.grid(True, alpha=0.3)
+            ax2.legend(loc='upper right')
+            
+            # Formatta l'asse X per le date
+            if len(timestamps) > 0:
+                if time_range == '30m':
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+                    ax2.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+                elif time_range == '1h':
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax2.xaxis.set_major_locator(mdates.MinuteLocator(interval=10))
+                elif time_range == '6h':
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax2.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+                elif time_range == '24h':
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax2.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+                else:  # 3d
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+                    ax2.xaxis.set_major_locator(mdates.HourLocator(interval=6))
+            plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
+                
+        elif resource_type == 'ram':
+            ram_data = data.get('ram', [])
+            
+            if not ram_data:
+                logger.error("Nessun dato RAM disponibile")
+                return None
+                
+            # Crea il grafico RAM
+            fig, ax = plt.subplots(1, 1, figsize=(14, 8))
+            
+            ram_data = filter_data_by_time(ram_data)
+            if not ram_data:
+                logger.error("Nessun dato RAM disponibile per l'intervallo selezionato")
+                return None
+                
+            timestamps = [datetime.fromisoformat(item['timestamp']) for item in ram_data]
+            values = [item['value'] for item in ram_data]
+            
+            # Calcola statistiche
+            current_val = values[-1] if values else 0
+            avg_val = sum(values) / len(values) if values else 0
+            min_val = min(values) if values else 0
+            max_val = max(values) if values else 0
+            
+            ax.plot(timestamps, values, color='#28a745', linewidth=2, label='RAM %')
+            ax.axhline(y=avg_val, color='orange', linestyle='--', alpha=0.7, label=f'{get_bot_translation("charts.labels.average")}: {avg_val:.1f}%')
+            ax.axhline(y=max_val, color='red', linestyle=':', alpha=0.7, label=f'{get_bot_translation("charts.labels.maximum")}: {max_val:.1f}%')
+            ax.axhline(y=min_val, color='green', linestyle=':', alpha=0.7, label=f'{get_bot_translation("charts.labels.minimum")}: {min_val:.1f}%')
+            
+            title_ram = f'{get_bot_translation("charts.labels.ram_usage")} - {get_bot_translation("charts.labels.current")}: {current_val:.1f}% | {get_bot_translation("charts.labels.average")}: {avg_val:.1f}% | {get_bot_translation("charts.labels.minimum")}: {min_val:.1f}% | {get_bot_translation("charts.labels.maximum")}: {max_val:.1f}%'
+            fig.suptitle(get_bot_translation('charts.titles.ram_detailed'), fontsize=16, fontweight='bold')
+            ax.set_title(title_ram, fontweight='bold', fontsize=12)
+            ax.set_ylabel('Percentuale (%)')
+            ax.set_xlabel('Tempo')
+            ax.grid(True, alpha=0.3)
+            ax.legend(loc='upper right')
+            
+            # Formatta l'asse X per le date
+            if len(timestamps) > 0:
+                if time_range == '30m':
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+                    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+                elif time_range == '1h':
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=10))
+                elif time_range == '6h':
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+                elif time_range == '24h':
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                    ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+                else:  # 3d
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+                    ax.xaxis.set_major_locator(mdates.HourLocator(interval=6))
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+        
+        # Regola il layout
+        plt.tight_layout()
+        
+        # Salva il grafico in un BytesIO object
+        img_buffer = BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=300, bbox_inches='tight')
+        img_buffer.seek(0)
+        
+        # Chiudi la figura per liberare memoria
+        plt.close(fig)
+        
+        return img_buffer
+        
+    except Exception as e:
+        logger.error(f"Errore nella generazione del grafico {resource_type}: {e}")
+        return None
+
 # Esporta le funzioni principali
 __all__ = ["init_bot", "stop_bot", "send_notification", "start_bot_thread", "stop_bot_thread", 
            "load_mount_points", "save_mount_points", "load_monitoring_config", "save_monitoring_config",
            "start_monitoring", "stop_monitoring", "get_default_monitoring_config", 
-           "set_bot_language", "get_bot_language"]
+           "set_bot_language", "get_bot_language", "generate_chart_image"]
 
 if __name__ == "__main__":
     # Configurazione del logging

@@ -5,15 +5,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        ENABLE_AI_DETECTION: ${ENABLE_AI_DETECTION:-false}
     container_name: ssh-monitor
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       - CHECK_INTERVAL=${CHECK_INTERVAL:-10}
       - HOSTNAME=${HOSTNAME:-server}
-      - LOCAL_IP=192.168.178.8 #SETYOURIP
+      - LOCAL_IP=192.168.1.105
       - LOG_TO_STDOUT=true
       - TZ=Europe/Rome
+      - ENABLE_AI_DETECTION=${ENABLE_AI_DETECTION:-false}
     volumes:
       - ./config:/etc/ssh_monitor
       - ./data:/var/lib/ssh_monitor
@@ -21,15 +24,9 @@ services:
       - /tmp:/tmp:ro
       - /home:/home:ro
       - /var/run/docker.sock:/var/run/docker.sock
-      #Uploads Mounts examples
-      - /home/user/folder1:/home/user/folder1
-      - /home/user/folder2:/home/user/folder2
-      #Downloads Mounts examples
-      - /home/user/folder3:/home/user/folder3:ro
-      - /home/user/folder4:/home/user/folder4:ro
       
     ports:
-      - "8082:5000" #Change Port if Already in use
+      - "8082:5000"
     cap_add:
       - NET_ADMIN  # Aggiunto per consentire l'accesso a informazioni di rete
     privileged: true

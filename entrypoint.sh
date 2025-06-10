@@ -5,8 +5,8 @@ set -e
 mkdir -p /etc/ssh_monitor
 mkdir -p /var/lib/ssh_monitor
 
-# Verifica se ci sono le variabili d'ambiente e crea config.ini
-if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+# Verifica se ci sono le variabili d'ambiente e crea config.ini solo se non esiste già
+if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ] && [ ! -f /etc/ssh_monitor/config.ini ]; then
     echo "Creazione configurazione da variabili d'ambiente..."
     cat > /etc/ssh_monitor/config.ini << EOF
 [Telegram]
@@ -22,6 +22,7 @@ local_ip = ${LOCAL_IP:-$(hostname -I | awk '{print $1}')}
 auth_log = ${AUTH_LOG:-/var/log/auth.log}
 fail_log = ${FAIL_LOG:-/var/log/faillog}
 EOF
+    echo "File di configurazione creato con successo."
 else
     # Verifica se esiste già un file config.ini
     if [ ! -f /etc/ssh_monitor/config.ini ]; then
@@ -50,6 +51,13 @@ fi
 if [ ! -f /var/lib/ssh_monitor/monitor_status.json ]; then
     echo "Creazione file di stato del monitoraggio..."
     echo '{"enabled": true}' > /var/lib/ssh_monitor/monitor_status.json
+fi
+
+# Log della configurazione AI
+if [ "${ENABLE_AI_DETECTION}" = "true" ]; then
+    echo "✅ AI Detection abilitata - modulo completamente disponibile"
+else
+    echo "❌ AI Detection disabilitata - nessuna dipendenza AI installata"
 fi
 
 echo "Avvio server web e monitoraggio SSH..."

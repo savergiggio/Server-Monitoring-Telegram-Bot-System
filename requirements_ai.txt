@@ -1,0 +1,7 @@
+# Dipendenze AI per la detection
+opencv-python>=4.5.0
+ultralytics>=8.0.0
+torch>=1.12.0
+torchvision>=0.13.0
+Pillow>=8.0.0
+numpy>=1.21.0
