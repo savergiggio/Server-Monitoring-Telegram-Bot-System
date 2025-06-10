@@ -7,15 +7,26 @@
     "alerts": "Alert System",
     "mount_points": "Mount Points",
     "languages": "Languages",
+    "commands": "Commands",
+    "video_analysis": "Video Analysis",
     "info": "Information"
   },
   "monitoring": {
     "title": "Monitoring SSH/SFTP Logins",
     "status": {
       "active": "Active",
-      "inactive": "Disabled"
+      "inactive": "Inactive"
     },
     "description": "Monitoring SSH/SFTP connections and sends Telegram notifications when it detects a new access.",
+    "excluded_ips": {
+      "title": "Excluded IPs from Monitoring",
+      "placeholder": "Enter IPs to exclude (one per line)",
+      "description": "IP addresses entered here will not generate SSH/SFTP access notifications. Supports single IPs (e.g. 192.168.1.100) and CIDR notation (e.g. 192.168.178.0/24)",
+      "save_button": "Save Excluded IPs",
+      "save_success": "Excluded IPs list saved successfully",
+      "save_error": "Error saving excluded IPs list",
+      "communication_error": "Error communicating with server"
+    },
     "toggle_success": "Monitoring {status} successfully",
     "toggle_error": "Error changing monitoring status"
   },
@@ -36,6 +47,9 @@
     "network_monitoring": "Network Connection Monitoring",
     "enabled": "Enabled",
     "threshold": "Threshold",
+    "hysteresis": "Hysteresis",
+    "hysteresis_duration": "Hysteresis Duration (sec)",
+    "hysteresis_description": "Hysteresis delays alert sending only if the value exceeds the threshold for the specified time",
     "reminder": "Reminder",
     "interval": "Interval",
     "unit": "Unit",
@@ -100,6 +114,7 @@
       "docker": "Manage Docker containers",
       "upload": "Upload files to server",
       "download": "Download files from server",
+      "commands": "Execute configured commands",
       "reboot": "Restart the server"
     }
   },
@@ -187,15 +202,126 @@
     "switch_to_dark": "Switch to dark theme",
     "switch_to_light": "Switch to light theme"
   },
+  "video_analysis": {
+    "title": "Video Analysis",
+    "configuration": "AI Detection Configuration",
+    "global_enabled": "Enable AI Detection Globally",
+    "model": "YOLO Model",
+    "detection_interval": "Detection Interval (seconds)",
+    "max_cameras": "Max Concurrent Cameras",
+    "save_config": "Save Configuration",
+    "status": "Status",
+    "controls": "Detection Controls",
+    "start": "Start Detection",
+    "restart": "Restart Detection",
+    "stop": "Stop Detection",
+    "system_status": "System Status:",
+    "waiting": "Waiting for update...",
+    "cameras": {
+      "title": "Camera Management",
+      "add": "Add Camera",
+      "name": "Camera Name",
+      "rtsp_url": "RTSP URL",
+      "confidence": "Confidence Threshold",
+      "categories": "Categories to Detect",
+      "people": "👤 People",
+      "objects": "📦 Objects",
+      "animals": "🐾 Animals",
+      "save": "Save",
+      "enabled": "Enabled",
+      "settings": "Settings",
+      "placeholder": {
+        "name": "e.g. Main Entrance",
+        "rtsp": "rtsp://username:password@ip:port/stream"
+      },
+      "iou_threshold": "IoU Threshold",
+      "iou_threshold_description": "Intersection over Union threshold for filtering overlapping detections (lower = more strict)",
+      "save_images": "Save Images to Server",
+      "save_images_description": "When enabled, detection snapshots will be permanently saved to the server for all cameras",
+      "save_path": "Save Path",
+      "save_path_description": "Directory path where all detection snapshots will be stored on the server",
+      "save_path_placeholder": "Enter the path where to save snapshots"
+    },
+    "models": {
+      "nano": "yolov10n Nano (Fast)",
+      "small": "yolov10s Small",
+      "medium": "yolov10m Medium",
+      "large": "yolov10l Large (Accurate)",
+      "xlarge": "yolov10x XLarge (Super Accurate)"
+    },
+    "bot_messages": {
+      "detection_started": "🎥 **AI Detection Started**\n\nThe AI detection system has been started and is monitoring the configured cameras.",
+      "detection_stopped": "🛑 **AI Detection Stopped**\n\nThe AI detection system has been stopped.",
+      "detection_restarted": "🔄 **AI Detection Restarted**\n\nThe AI detection system has been restarted with the new settings.",
+      "object_detected": "🔍 **Object Detected**\n\nCamera: {camera_name}\nObjects: {objects}\nDate: {date}\nTime: {time}"
+    }
+  },
   "bot_messages": {
     "welcome": "Welcome to Server Monitor Bot!\n\nThis bot allows you to monitor your server status and receive notifications when important events are detected such as SSH access or high resource usage.\n\nUse /res to check current server status\nUse /help to see all available commands",
-    "help": "Available commands:\n\n/start - Start the bot\n/help - Show this help message\n/res - Display system resources\n/docker - Manage Docker containers\n/upload - Upload files to server\n/download - Download files from server\n/reboot - Restart server (requires confirmation)",
+    "help": "Available commands:\n\n/start - Start the bot\n/help - Show this help message\n/res - Display system resources\n/docker - Manage Docker containers\n/upload - Upload files to server\n/download - Download files from server\n/commands - Execute configured commands\n/reboot - Restart server (requires confirmation)",
+    "keyboard_buttons": {
+      "resources": "📊 Resource Usage",
+      "docker": "🐳 Containers",
+      "upload": "📤 Upload to Server",
+      "download": "📥 Download from Server",
+      "ai": "🤖 AI Detection",
+      "commands": "⚙️ Commands List",
+      "reboot": "🔄 Reboot Server",
+      "help": "❓ Help"
+    },
     "choose_resource": "Choose which information to display:",
     "reboot_confirm": "Are you sure you want to restart the server?\n\nThis action will cause a temporary interruption of all services.",
     "reboot_yes": "Yes, restart server",
     "reboot_no": "No, cancel",
     "operation_cancelled": "Operation cancelled.",
-    "reboot_in_progress": "Server restart in progress...\n\nThe server will be restarted. This operation may take several minutes.\nThe bot will be temporarily unavailable until the restart is complete.",
+    "reboot_in_progress": "Server reboot in progress...\n\nThe server will be restarted. This operation may take a few minutes.\nThe bot will be temporarily unavailable until the reboot is complete.",
+    "commands": {
+      "title": "📋 Available Commands",
+      "select_command": "Select a command to execute:",
+      "no_commands": "❌ No commands configured.",
+      "no_enabled_commands": "❌ No enabled commands.",
+      "cancel": "❌ Cancel",
+      "error": "❌ Error loading commands.",
+      "command_not_found": "❌ Command not found.",
+      "command_disabled": "❌ Command disabled.",
+      "executing": "⏳ Executing command *{command_name}*...",
+      "script_not_found": "❌ Script not found at specified path.",
+      "execution_success": "✅ *Command Executed Successfully*\n\n📝 *Name:* {command_name}\n📄 *Description:* {description}\n🕐 *Timestamp:* {timestamp}\n\n📤 *Output:*\n```\n{output}\n```",
+      "execution_error": "❌ *Command Execution Error*\n\n📝 *Name:* {command_name}\n🚨 *Error:* {error}\n🕐 *Timestamp:* {timestamp}",
+      "scheduled_success": "⏰ *Scheduled Command Executed*\n\n📝 *Name:* {command_name}\n📄 *Description:* {description}\n🕐 *Timestamp:* {timestamp}\n\n📤 *Output:*\n```\n{output}\n```",
+      "scheduled_success_no_output": "⏰ *Scheduled Command Executed*\n\n📝 *Name:* {command_name}\n📄 *Description:* {description}\n🕐 *Timestamp:* {timestamp}",
+      "scheduled_error": "⏰ *Scheduled Command Error*\n\n📝 *Name:* {command_name}\n🚨 *Error:* {error}\n🕐 *Timestamp:* {timestamp}",
+      "scheduling_system_error": "⏰ *Scheduling System Error*\n\n📝 *Command:* {command_name}\n🚨 *Error:* {error}\n🕐 *Timestamp:* {timestamp}",
+      "general_error": "❌ General error during command execution."
+    },
+    "ai_detection": {
+      "title": "🤖 AI Detection Control",
+      "status_title": "📊 Current Status:",
+      "global_enabled": "✅ AI Detection Globally Enabled",
+      "global_disabled": "❌ AI Detection Globally Disabled",
+      "cameras_active": "📹 Active Cameras: {count}",
+      "cameras_total": "📱 Total Cameras: {count}",
+      "start_button": "▶️ Start",
+      "stop_button": "⏹️ Stop",
+      "restart_button": "🔄 Restart",
+      "toggle_global_button": "🔧 Toggle Global Enable/Disable",
+      "status_button": "📊 Detailed Status",
+      "back_button": "🔙 Back to Menu",
+      "not_available": "❌ AI Detection not available or not enabled",
+      "started": "✅ AI Detection started successfully",
+      "stopped": "⏹️ AI Detection stopped successfully",
+      "restarted": "🔄 AI Detection restarted successfully",
+      "start_error": "❌ Error starting AI Detection",
+      "stop_error": "❌ Error stopping AI Detection",
+      "restart_error": "❌ Error restarting AI Detection",
+      "global_enabled_msg": "✅ AI Detection enabled globally",
+      "global_disabled_msg": "❌ AI Detection disabled globally",
+      "toggle_error": "❌ Error toggling global state",
+      "status_detailed": "📊 Detailed AI Detection Status",
+      "status_error": "❌ Error retrieving status",
+      "active_cameras_list": "📹 Active Cameras:",
+      "back_to_menu": "🔙 Back to AI Menu"
+    },
     "docker_management": "Docker Container Management",
     "docker_summary": "🟢 Running: {running} | 🔴 Stopped: {stopped}",
     "back_to_resources": "⬅️ Back to resources menu",
@@ -358,15 +484,168 @@
       "second_singular": "second",
       "second_plural": "seconds"
     },
+    "video_analysis": {
+      "title": "Video Analysis",
+      "ai_config": {
+        "title": "AI Detection Configuration",
+        "global_enabled": "Enable AI Detection Globally",
+        "model": "YOLO Model",
+        "detection_interval": "Detection Interval (seconds)",
+        "max_cameras": "Max Simultaneous Cameras",
+        "save_config": "Save Configuration",
+        "status": "Status"
+      },
+      "controls": {
+        "title": "Detection Controls",
+        "start": "Start Detection",
+        "restart": "Restart Detection",
+        "stop": "Stop Detection",
+        "system_status": "System Status:",
+        "waiting": "Waiting for update..."
+      },
+      "cameras": {
+        "title": "Camera Management",
+        "add": "Add Camera",
+        "no_cameras": "No cameras configured. Click \"Add Camera\" to get started.",
+        "enabled": "Enabled",
+        "settings": "Settings",
+        "name": "Camera Name",
+        "rtsp_url": "RTSP URL",
+        "confidence": "Confidence Threshold",
+        "iou_threshold": "IoU Threshold",
+        "iou_threshold_description": "Intersection over Union threshold for filtering overlapping detections (lower = more strict)",
+        "save_images": "Save Images to Server",
+        "save_images_description": "When enabled, detection snapshots will be permanently saved to the server for all cameras",
+        "save_path": "Save Path",
+        "save_path_description": "Directory path where all detection snapshots will be stored on the server",
+        "save_path_placeholder": "Enter the path where to save snapshots",
+        "categories": "Categories to Detect",
+        "people": "👤 People",
+        "objects": "📦 Objects",
+        "animals": "🐾 Animals",
+        "save": "Save Changes",
+        "delete": "Delete",
+        "placeholder": {
+          "name": "E.g.: Main Entrance",
+          "rtsp": "rtsp://username:password@ip:port/stream",
+          "save_path": "/var/lib/ssh_monitor/snapshots"
+        }
+      },
+      "messages": {
+        "config_saved": "AI configuration saved successfully",
+        "cameras_saved": "Camera configuration saved successfully",
+        "camera_deleted": "Camera deleted successfully",
+        "detection_started": "Detection started successfully",
+        "detection_stopped": "Detection stopped successfully",
+        "detection_restarted": "Detection restarted successfully",
+        "error": "An error occurred: {message}"
+      },
+      "bot_messages": {
+        "detection_alert": "🔍 *AI Detection*\n\n📷 *Camera:* {camera_name}\n⏱️ *Time:* {timestamp}\n\n🔎 *Detected:*\n{detections}",
+        "person_detected": "👤 Person ({confidence}%)",
+        "animal_detected": "🐾 Animal: {class_name} ({confidence}%)",
+        "object_detected": "📦 Object: {class_name} ({confidence}%)"
+      }
+    },
     "alert_messages": {
-      "cpu_alert": "🚨 *ALERT - CPU*\n\n💻 *Current usage:* {value:.1f}%\n⚠️ *Threshold exceeded:* {threshold:.1f}%\n🕐 *Timestamp:* {timestamp}",
+      "cpu_alert": "🚨 ALERT - CPU\n\n💻 Current usage: {value:.1f}%\n⚠️ Threshold exceeded: {threshold:.1f}%\n🕐 Timestamp: {timestamp}\n\n{top_processes}",
       "cpu_recovery": "✅ *RECOVERY - CPU*\n\n💻 *Current usage:* {value:.1f}%\n✅ *Back below threshold:* {threshold:.1f}%\n🕐 *Timestamp:* {timestamp}",
-      "ram_alert": "🚨 *ALERT - RAM*\n\n💾 *Current usage:* {value:.1f}%\n⚠️ *Threshold exceeded:* {threshold:.1f}%\n🕐 *Timestamp:* {timestamp}",
+      "ram_alert": "🚨 ALERT - RAM\n\n💾 Current usage: {value:.1f}%\n⚠️ Threshold exceeded: {threshold:.1f}%\n🕐 Timestamp: {timestamp}\n\n{top_processes}",
       "ram_recovery": "✅ *RECOVERY - RAM*\n\n💾 *Current usage:* {value:.1f}%\n✅ *Back below threshold:* {threshold:.1f}%\n🕐 *Timestamp:* {timestamp}",
-      "temp_alert": "🚨 *ALERT - CPU Temperature*\n\n🌡️ *Current temperature:* {value:.1f}°C\n⚠️ *Threshold exceeded:* {threshold:.1f}°C\n🕐 *Timestamp:* {timestamp}",
+      "temp_alert": "🚨 ALERT - CPU Temperature\n\n🌡️ Current temperature: {value:.1f}°C\n⚠️ Threshold exceeded: {threshold:.1f}°C\n🕐 Timestamp: {timestamp}\n\n{top_processes}",
       "temp_recovery": "✅ *RECOVERY - CPU Temperature*\n\n🌡️ *Current temperature:* {value:.1f}°C\n✅ *Back below threshold:* {threshold:.1f}°C\n🕐 *Timestamp:* {timestamp}",
       "disk_alert": "🚨 *ALERT - Disk Space*\n\n📂 *Mount Point:* `{mount_point}`\n📊 *Current usage:* {value:.1f}%\n⚠️ *Threshold exceeded:* {threshold:.1f}%\n🕐 *Timestamp:* {timestamp}",
       "disk_recovery": "✅ *RECOVERY - Disk Space*\n\n📂 *Mount Point:* `{mount_point}`\n📊 *Current usage:* {value:.1f}%\n✅ *Back below threshold:* {threshold:.1f}%\n🕐 *Timestamp:* {timestamp}"
+    }
+  },
+  "commands": {
+    "title": "Commands Management",
+    "description": "Configure custom scripts to execute via Telegram bot.",
+    "configured_commands": "Configured Commands",
+    "add_command": "Add Command",
+    "new_command": "New Command",
+    "command_name": "Command Name",
+    "command_description": "Description",
+    "script_path": "Script Path",
+    "script_path_help": "Enter the full path of the script to execute (e.g. /home/user/scripts/backup.sh)",
+    "enabled": "Enabled",
+    "cron_enabled": "Enable Scheduling",
+    "cron_schedule": "Cron Expression",
+    "cron_schedule_help": "Format: minutes(0-59) hours(0-23) day_of_month(1-31) month(1-12) day_of_week(0-6, 0=Sunday)",
+    "save_command": "Save Command",
+    "update_command": "Update Command",
+    "cancel": "Cancel",
+    "test_command": "Test Command",
+    "edit_command": "Edit",
+    "delete_command": "Delete",
+    "execute_command": "Execute",
+    "command_saved": "Command saved successfully",
+    "command_deleted": "Command deleted successfully",
+    "command_executed": "Command executed successfully",
+    "command_test_success": "Command test completed",
+    "command_error": "Error executing command",
+    "script_not_found": "Script not found at specified path",
+    "no_commands": "No commands configured",
+    "confirm_delete": "Are you sure you want to delete this command?",
+    "telegram": {
+      "commands_list": "📋 *Available Commands:*\n\n{commands}\n\nSelect a command to execute:",
+      "no_commands": "❌ No commands configured.",
+      "command_executed": "✅ *Command Executed*\n\n📝 *Name:* {name}\n📄 *Description:* {description}\n🕐 *Timestamp:* {timestamp}\n\n📤 *Output:*\n```\n{output}\n```",
+      "command_error": "❌ *Command Execution Error*\n\n📝 *Name:* {name}\n🚨 *Error:* {error}\n🕐 *Timestamp:* {timestamp}",
+      "command_not_found": "❌ Command not found.",
+      "command_disabled": "❌ Command disabled.",
+      "script_not_executable": "❌ Script not executable or not found."
+    }
+  },
+  "charts": {
+    "title": "Historical Chart",
+    "time_range": "Time Range",
+    "refresh": "Refresh",
+    "reset": "Reset Data",
+    "reset_confirm": "Are you sure you want to delete all historical chart data?",
+    "reset_success": "Historical data successfully deleted",
+    "reset_error": "Error deleting historical data",
+    "graph_button": "📊 Graph",
+    "graph_generating": "Generating graph...",
+    "graph_sent": "Graph sent successfully",
+    "graph_error": "Error generating graph",
+    "select_time_range": "📊 Select the time range for the graph:",
+    "auto_refresh": "Auto Refresh",
+    "current_value": "Current Value",
+    "average": "Average",
+    "maximum": "Maximum",
+    "minimum": "Minimum",
+    "ranges": {
+      "30m": "Last 30 Minutes",
+      "1h": "Last Hour",
+      "6h": "Last 6 Hours",
+      "24h": "Last 24 Hours",
+      "3d": "Last 3 Days",
+      "7d": "Last 7 Days",
+      "30d": "Last 30 Days"
+    },
+    "metrics": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "temperature": "Temperature"
+    },
+    "captions": {
+      "cpu_temp": "📊 CPU and Temperature Chart - {time_range}",
+      "ram": "📊 RAM Chart - {time_range}",
+      "data_source": "Data based on values collected in the historical_metrics.json file"
+    },
+    "titles": {
+      "cpu_temp_detailed": "CPU and Temperature History - Detailed Analysis",
+      "ram_detailed": "RAM Usage History - Detailed Analysis"
+    },
+    "labels": {
+      "current": "Current",
+      "average": "Average",
+      "minimum": "Min",
+      "maximum": "Max",
+      "cpu_usage": "CPU Usage",
+      "cpu_temperature": "CPU Temperature",
+      "ram_usage": "RAM Usage"
     }
   }
 }

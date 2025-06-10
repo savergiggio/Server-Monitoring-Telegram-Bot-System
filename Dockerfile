@@ -23,13 +23,33 @@ WORKDIR /app
 # Crea le directory necessarie
 RUN mkdir -p /etc/ssh_monitor /var/lib/ssh_monitor
 
-# Copia il file requirements e installa le dipendenze
+# Copia il file requirements e installa le dipendenze base
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Installa dipendenze AI se abilitato tramite build arg
+ARG ENABLE_AI_DETECTION=false
+COPY requirements_ai.txt .
+RUN if [ "$ENABLE_AI_DETECTION" = "true" ]; then \
+        apt-get update && apt-get install -y --no-install-recommends \
+            build-essential \
+            gcc \
+            g++ \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender1 \
+            libgomp1 \
+            libgl1-mesa-glx \
+            libglib2.0-dev \
+            && rm -rf /var/lib/apt/lists/* \
+            && pip install --no-cache-dir -r requirements_ai.txt; \
+    fi
 
 # Copia l'applicazione e i file statici
 COPY app.py .
 COPY telegram_bot.py .
+COPY ai_detection.py .
 COPY templates templates/
 COPY static static/
 COPY translations translations/

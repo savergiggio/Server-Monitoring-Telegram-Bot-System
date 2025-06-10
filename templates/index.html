@@ -46,6 +46,14 @@
                         <a class="nav-link text-dark" id="tab-languages" data-bs-toggle="tab" href="#languages">{{ translations.nav.languages }}</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link text-dark" id="tab-commands" data-bs-toggle="tab" href="#commands">{{ translations.nav.commands }}</a>
+                    </li>
+                    {% if ai_detection_enabled %}
+                    <li class="nav-item">
+                        <a class="nav-link text-dark" id="tab-video-analysis" data-bs-toggle="tab" href="#video-analysis">Video Analysis</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
                         <a class="nav-link text-dark" id="tab-info" data-bs-toggle="tab" href="#info">{{ translations.nav.info }}</a>
                     </li>
                 </ul>
@@ -70,6 +78,28 @@
                                     </div>
                                     <div class="mt-3">
                                         <p>{{ translations.monitoring.description }}</p>
+                                    </div>
+                                    
+                                    <!-- Sezione IP Esclusi -->
+                                    <div class="mt-4">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h6><i class="bi bi-shield-x"></i> {{ translations.monitoring.excluded_ips.title }}</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="excludedIps" class="form-label">{{ translations.monitoring.excluded_ips.description }}</label>
+                                                    <textarea class="form-control" id="excludedIps" rows="4" placeholder="{{ translations.monitoring.excluded_ips.placeholder }}"></textarea>
+                                                    <div class="form-text">
+                                                        <i class="bi bi-info-circle"></i> 
+                                                        Esempi: 192.168.1.100, 10.0.0.5, 172.16.0.10
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn btn-primary" onclick="saveExcludedIps()">
+                                                    <i class="bi bi-save"></i> {{ translations.monitoring.excluded_ips.save_button }}
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -128,6 +158,7 @@
                                                     <li class="list-group-item"><strong>/docker</strong> - {{ translations.telegram.commands.docker }}</li>
                                                     <li class="list-group-item"><strong>/upload</strong> - {{ translations.telegram.commands.upload }}</li>
                                                     <li class="list-group-item"><strong>/download</strong> - {{ translations.telegram.commands.download }}</li>
+                                                    <li class="list-group-item"><strong>/commands</strong> - {{ translations.telegram.commands.commands }}</li>
                                                     <li class="list-group-item"><strong>/reboot</strong> - {{ translations.telegram.commands.reboot }}</li>
                                                 </ul>
                                             </div>
@@ -178,19 +209,34 @@
                                     <div class="row" id="currentMetrics">
                                         <div class="col-md-3">
                                             <div class="metric-card">
-                                                <div class="metric-title">CPU</div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="metric-title">CPU</div>
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="openChart('cpu')" title="Visualizza grafico storico CPU">
+                                                        <i class="bi bi-graph-up"></i>
+                                                    </button>
+                                                </div>
                                                 <div class="metric-value" id="currentCpu">--</div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="metric-card">
-                                                <div class="metric-title">RAM</div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="metric-title">RAM</div>
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="openChart('ram')" title="Visualizza grafico storico RAM">
+                                                        <i class="bi bi-graph-up"></i>
+                                                    </button>
+                                                </div>
                                                 <div class="metric-value" id="currentRam">--</div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="metric-card">
-                                                <div class="metric-title">{{ translations.alerts.metrics.temperature }}</div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="metric-title">{{ translations.alerts.metrics.temperature }}</div>
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="openChart('temperature')" title="Visualizza grafico storico temperatura">
+                                                        <i class="bi bi-graph-up"></i>
+                                                    </button>
+                                                </div>
                                                 <div class="metric-value" id="currentTemp">--</div>
                                             </div>
                                         </div>
@@ -212,28 +258,43 @@
                                     <h6><i class="bi bi-cpu"></i> {{ translations.alerts.cpu_monitoring }}</h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-2">
+                                    <!-- Sezione Toggle -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="cpuEnabled">
                                                 <label class="form-check-label" for="cpuEnabled">{{ translations.alerts.enabled }}</label>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="cpuThreshold" class="form-label">{{ translations.alerts.threshold }} (%)</label>
-                                            <input type="number" class="form-control" id="cpuThreshold" value="80" min="1" max="100">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="cpuHysteresisEnabled">
+                                                <label class="form-check-label" for="cpuHysteresisEnabled">{{ translations.alerts.hysteresis }}</label>
+                                            </div>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="cpuReminderEnabled">
                                                 <label class="form-check-label" for="cpuReminderEnabled">{{ translations.alerts.reminder }}</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
+                                    </div>
+                                    
+                                    <!-- Sezione Configurazione -->
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label for="cpuThreshold" class="form-label">{{ translations.alerts.threshold }} (%)</label>
+                                            <input type="number" class="form-control" id="cpuThreshold" value="80" min="1" max="100">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="cpuHysteresisDuration" class="form-label">{{ translations.alerts.hysteresis_duration }}</label>
+                                            <input type="number" class="form-control" id="cpuHysteresisDuration" value="5" min="1" max="300">
+                                        </div>
+                                        <div class="col-md-3">
                                             <label for="cpuReminderInterval" class="form-label">{{ translations.alerts.interval }}</label>
                                             <input type="number" class="form-control" id="cpuReminderInterval" value="300" min="60">
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <label for="cpuReminderUnit" class="form-label">{{ translations.alerts.unit }}</label>
                                             <select class="form-select" id="cpuReminderUnit">
                                                 <option value="seconds">{{ translations.alerts.units.seconds }}</option>
@@ -242,10 +303,16 @@
                                                 <option value="days">{{ translations.alerts.units.days }}</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-1">
-                                            <button type="button" class="btn btn-outline-info btn-sm mt-4" onclick="testAlert('cpu_usage')">
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <button type="button" class="btn btn-outline-info btn-sm" onclick="testAlert('cpu_usage')">
                                                 <i class="bi bi-play"></i> {{ translations.alerts.test }}
                                             </button>
+                                            <small class="text-muted ms-3">
+                                                <i class="bi bi-info-circle"></i> 
+                                                {{ translations.alerts.hysteresis_description }}
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -257,28 +324,43 @@
                                     <h6><i class="bi bi-memory"></i> {{ translations.alerts.ram_monitoring }}</h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-2">
+                                    <!-- Sezione Toggle -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="ramEnabled">
                                                 <label class="form-check-label" for="ramEnabled">{{ translations.alerts.enabled }}</label>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="ramThreshold" class="form-label">{{ translations.alerts.threshold }} (%)</label>
-                                            <input type="number" class="form-control" id="ramThreshold" value="85" min="1" max="100">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="ramHysteresisEnabled">
+                                                <label class="form-check-label" for="ramHysteresisEnabled">{{ translations.alerts.hysteresis }}</label>
+                                            </div>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="ramReminderEnabled">
                                                 <label class="form-check-label" for="ramReminderEnabled">{{ translations.alerts.reminder }}</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
+                                    </div>
+                                    
+                                    <!-- Sezione Configurazione -->
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label for="ramThreshold" class="form-label">{{ translations.alerts.threshold }} (%)</label>
+                                            <input type="number" class="form-control" id="ramThreshold" value="85" min="1" max="100">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="ramHysteresisDuration" class="form-label">{{ translations.alerts.hysteresis_duration }}</label>
+                                            <input type="number" class="form-control" id="ramHysteresisDuration" value="5" min="1" max="300">
+                                        </div>
+                                        <div class="col-md-3">
                                             <label for="ramReminderInterval" class="form-label">{{ translations.alerts.interval }}</label>
                                             <input type="number" class="form-control" id="ramReminderInterval" value="300" min="60">
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <label for="ramReminderUnit" class="form-label">{{ translations.alerts.unit }}</label>
                                             <select class="form-select" id="ramReminderUnit">
                                                 <option value="seconds">{{ translations.alerts.units.seconds }}</option>
@@ -287,10 +369,16 @@
                                                 <option value="days">{{ translations.alerts.units.days }}</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-1">
-                                            <button type="button" class="btn btn-outline-info btn-sm mt-4" onclick="testAlert('ram_usage')">
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <button type="button" class="btn btn-outline-info btn-sm" onclick="testAlert('ram_usage')">
                                                 <i class="bi bi-play"></i> {{ translations.alerts.test }}
                                             </button>
+                                            <small class="text-muted ms-3">
+                                                <i class="bi bi-info-circle"></i> 
+                                                {{ translations.alerts.hysteresis_description }}
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -302,28 +390,43 @@
                                     <h6><i class="bi bi-thermometer-half"></i> {{ translations.alerts.temp_monitoring }}</h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-2">
+                                    <!-- Sezione Toggle -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="tempEnabled">
                                                 <label class="form-check-label" for="tempEnabled">{{ translations.alerts.enabled }}</label>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="tempThreshold" class="form-label">{{ translations.alerts.threshold }} (°C)</label>
-                                            <input type="number" class="form-control" id="tempThreshold" value="70" min="1" max="120">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="tempHysteresisEnabled">
+                                                <label class="form-check-label" for="tempHysteresisEnabled">{{ translations.alerts.hysteresis }}</label>
+                                            </div>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="tempReminderEnabled">
                                                 <label class="form-check-label" for="tempReminderEnabled">{{ translations.alerts.reminder }}</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
+                                    </div>
+                                    
+                                    <!-- Sezione Configurazione -->
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label for="tempThreshold" class="form-label">{{ translations.alerts.threshold }} (°C)</label>
+                                            <input type="number" class="form-control" id="tempThreshold" value="70" min="1" max="120">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="tempHysteresisDuration" class="form-label">{{ translations.alerts.hysteresis_duration }}</label>
+                                            <input type="number" class="form-control" id="tempHysteresisDuration" value="5" min="1" max="300">
+                                        </div>
+                                        <div class="col-md-3">
                                             <label for="tempReminderInterval" class="form-label">{{ translations.alerts.interval }}</label>
                                             <input type="number" class="form-control" id="tempReminderInterval" value="600" min="60">
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <label for="tempReminderUnit" class="form-label">{{ translations.alerts.unit }}</label>
                                             <select class="form-select" id="tempReminderUnit">
                                                 <option value="seconds">{{ translations.alerts.units.seconds }}</option>
@@ -332,10 +435,16 @@
                                                 <option value="days">{{ translations.alerts.units.days }}</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-1">
-                                            <button type="button" class="btn btn-outline-info btn-sm mt-4" onclick="testAlert('cpu_temperature')">
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <button type="button" class="btn btn-outline-info btn-sm" onclick="testAlert('cpu_temperature')">
                                                 <i class="bi bi-play"></i> {{ translations.alerts.test }}
                                             </button>
+                                            <small class="text-muted ms-3">
+                                                <i class="bi bi-info-circle"></i> 
+                                                {{ translations.alerts.hysteresis_description }}
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -365,35 +474,40 @@
                                     <h6><i class="bi bi-wifi"></i> {{ translations.alerts.network_monitoring }}</h6>
                                 </div>
                                 <div class="card-body">
-
-                                    
-                                    <div class="row">
-                                        <div class="col-md-2">
+                                    <!-- Sezione Toggle -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="networkReconnectEnabled">
                                                 <label class="form-check-label" for="networkReconnectEnabled">{{ translations.alerts.enabled }}</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
+                                    </div>
+                                    
+                                    <!-- Sezione Configurazione -->
+                                    <div class="row">
+                                        <div class="col-md-4">
                                             <label for="networkTestHost" class="form-label">{{ translations.alerts.network_test_host }}</label>
                                             <input type="text" class="form-control" id="networkTestHost" value="8.8.8.8" placeholder="8.8.8.8">
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-4">
                                             <label for="networkTestTimeout" class="form-label">{{ translations.alerts.network_test_timeout }}</label>
                                             <input type="number" class="form-control" id="networkTestTimeout" value="5" min="1" max="30">
                                         </div>
-
-                                        <div class="col-md-1">
-                                            <button type="button" class="btn btn-outline-info btn-sm mt-4" id="testNetworkAlert">
+                                        <div class="col-md-4 d-flex align-items-end">
+                                            <button type="button" class="btn btn-outline-info btn-sm" id="testNetworkAlert">
                                                 <i class="bi bi-play"></i> {{ translations.alerts.test }}
                                             </button>
                                         </div>
-                                        <div class="mb-3">
-                                        <small class="text-muted">
-                                            <i class="bi bi-info-circle"></i> 
-                                            {{ translations.alerts.network_description }}
-                                        </small>
                                     </div>
+                                    
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i> 
+                                                {{ translations.alerts.network_description }}
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -535,6 +649,217 @@
                     </div>
                 </div>
                 
+                <!-- Tab Comandi -->
+                <div class="tab-pane fade" id="commands">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="bi bi-terminal"></i> {{ translations.commands.title }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>{{ translations.commands.description }}</p>
+                            
+                            <!-- Lista comandi configurati -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6>{{ translations.commands.configured_commands }}:</h6>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="addNewCommand()">
+                                        <i class="bi bi-plus-circle"></i> {{ translations.commands.add_command }}
+                                    </button>
+                                </div>
+                                <div id="commandsList" class="mb-3">
+                                    <!-- I comandi saranno caricati dinamicamente -->
+                                </div>
+                            </div>
+                            
+                            <!-- Configurazione nuovo comando -->
+                            <div class="card" id="newCommandCard" style="display: none;">
+                                <div class="card-header">
+                                    <h6><i class="bi bi-plus-circle"></i> {{ translations.commands.new_command }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="commandForm">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="commandName" class="form-label">{{ translations.commands.command_name }}:</label>
+                                                    <input type="text" class="form-control" id="commandName" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="commandDescription" class="form-label">{{ translations.commands.command_description }}:</label>
+                                                    <input type="text" class="form-control" id="commandDescription" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="commandScript" class="form-label">{{ translations.commands.script_path }}:</label>
+                                            <input type="text" class="form-control" id="commandScript" placeholder="/path/to/script.sh" required>
+                                            <div class="form-text">{{ translations.commands.script_path_help }}</div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="commandEnabled">
+                                                    <label class="form-check-label" for="commandEnabled">
+                                                        {{ translations.commands.enabled }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="commandCronEnabled">
+                                                    <label class="form-check-label" for="commandCronEnabled">
+                                                        {{ translations.commands.cron_enabled }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="cronScheduleDiv" class="mb-3" style="display: none;">
+                                            <label for="cronSchedule" class="form-label">{{ translations.commands.cron_schedule }}</label>
+                                            <input type="text" class="form-control" id="cronSchedule" placeholder="0 2 * * *">
+                                            <div class="form-text">{{ translations.commands.cron_schedule_help }}</div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-success" onclick="saveCommandFromForm()">
+                                                <i class="bi bi-check-circle"></i> {{ translations.commands.save_command }}
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" onclick="cancelNewCommand()">
+                                                <i class="bi bi-x-circle"></i> {{ translations.commands.cancel }}
+                                            </button>
+                                            <button type="button" class="btn btn-info" onclick="testCommand()">
+                                                <i class="bi bi-play-circle"></i> {{ translations.commands.test_command }}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if ai_detection_enabled %}
+                <!-- Tab Video Analysis -->
+                <div class="tab-pane fade" id="video-analysis">
+                    <div class="row">
+                        <!-- Configurazione AI -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h5><i class="bi bi-robot"></i> {{ translations.video_analysis.configuration }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="aiGlobalEnabled">
+                                            <label class="form-check-label" for="aiGlobalEnabled">
+                                                {{ translations.video_analysis.global_enabled }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="modelPath" class="form-label">{{ translations.video_analysis.model }}</label>
+                                        <select class="form-select" id="modelPath">
+                                            <option value="yolov10n.pt">{{ translations.video_analysis.models.nano }}</option>
+                                            <option value="yolov10s.pt">{{ translations.video_analysis.models.small }}</option>
+                                            <option value="yolov10m.pt">{{ translations.video_analysis.models.medium }}</option>
+                                            <option value="yolov10l.pt">{{ translations.video_analysis.models.large }}</option>
+                                            <option value="yolov10x.pt">{{ translations.video_analysis.models.xlarge }}</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="detectionInterval" class="form-label">{{ translations.video_analysis.detection_interval }}</label>
+                                        <input type="number" class="form-control" id="detectionInterval" min="1" max="60" step="0.5" value="2">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="maxConcurrentCameras" class="form-label">{{ translations.video_analysis.max_cameras }}</label>
+                                        <input type="number" class="form-control" id="maxConcurrentCameras" min="1" max="10" value="4">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="globalSaveImages" checked>
+                                            <label class="form-check-label" for="globalSaveImages">
+                                                {{ translations.video_analysis.cameras.save_images }}
+                                            </label>
+                                        </div>
+                                        <small class="form-text text-muted">{{ translations.video_analysis.cameras.save_images_description }}</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="globalSavePath" class="form-label">{{ translations.video_analysis.cameras.save_path }}</label>
+                                        <input type="text" class="form-control" id="globalSavePath" value="/var/lib/ssh_monitor/snapshots" placeholder="{{ translations.video_analysis.cameras.save_path_placeholder }}">
+                                        <small class="form-text text-muted">{{ translations.video_analysis.cameras.save_path_description }}</small>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-success" id="saveAiConfig">
+                                            <i class="bi bi-save"></i> {{ translations.video_analysis.save_config }}
+                                        </button>
+                                        <button type="button" class="btn btn-info" id="detectionStatus">
+                                            <i class="bi bi-info-circle"></i> {{ translations.video_analysis.status }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Controlli Detection -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="bi bi-play-circle"></i> {{ translations.video_analysis.controls }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-success btn-lg" id="startDetection">
+                                            <i class="bi bi-play-fill"></i> {{ translations.video_analysis.start }}
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-lg" id="restartDetection">
+                                            <i class="bi bi-arrow-clockwise"></i> {{ translations.video_analysis.restart }}
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-lg" id="stopDetection">
+                                            <i class="bi bi-stop-fill"></i> {{ translations.video_analysis.stop }}
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <h6>{{ translations.video_analysis.system_status }}</h6>
+                                        <div id="detectionStatusDisplay" class="alert alert-secondary">
+                                            <i class="bi bi-clock"></i> {{ translations.video_analysis.waiting }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Gestione Telecamere -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5><i class="bi bi-camera-video"></i> {{ translations.video_analysis.cameras.title }}</h5>
+                                        <button type="button" class="btn btn-primary btn-sm" id="addNewCamera">
+                                            <i class="bi bi-plus"></i> {{ translations.video_analysis.cameras.add }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="camerasContainer">
+                                        <!-- Le telecamere verranno caricate qui dinamicamente -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
                 <!-- Tab Informazioni -->
                 <div class="tab-pane fade" id="info">
                     <div class="card">
@@ -567,7 +892,7 @@
             </div>
 <div class="card-footer text-center text-muted">
     <small>
-        <a href="https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System" target="_blank" class="text-muted text-decoration-none">
+        <a href="https://github.com/tuo-username/tuo-repository" target="_blank" class="text-muted text-decoration-none">
             <i class="bi bi-github me-1"></i>
             Github
         </a>
@@ -581,8 +906,464 @@
     <script>
         // Traduzioni disponibili per JavaScript
         window.translations = {{ translations | tojson | safe }};
+        
+        // Debug: verifica che le traduzioni siano caricate correttamente
+        console.log('Traduzioni caricate:', window.translations);
+        if (window.translations && window.translations.video_analysis && window.translations.video_analysis.cameras) {
+            console.log('Traduzioni video_analysis.cameras disponibili:', window.translations.video_analysis.cameras);
+        } else {
+            console.error('ERRORE: Traduzioni video_analysis.cameras non disponibili!');
+        }
+        
+        // ========== Funzioni per IP Esclusi ==========
+        
+        // Carica IP esclusi
+        async function loadExcludedIps() {
+            try {
+                const response = await fetch('/api/excluded-ips');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('excludedIps').value = data.excluded_ips.join('\n');
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento IP esclusi:', error);
+            }
+        }
+        
+        // Salva IP esclusi
+        async function saveExcludedIps() {
+            const textarea = document.getElementById('excludedIps');
+            const ipsText = textarea.value.trim();
+            
+            // Converte il testo in array di IP, rimuovendo righe vuote
+            const ips = ipsText.split('\n')
+                .map(ip => ip.trim())
+                .filter(ip => ip.length > 0);
+            
+            try {
+                const response = await fetch('/api/excluded-ips', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ excluded_ips: ips })
+                });
+                
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'danger');
+            } catch (error) {
+                showMessage(window.translations.monitoring.excluded_ips.communication_error, 'danger');
+                console.error('Errore:', error);
+            }
+        }
+        
+        {% if ai_detection_enabled %}
+        // ========== Funzioni per AI Detection ==========
+        
+        // Variabili globali per AI
+        window.aiDetectionEnabled = {{ ai_detection_enabled | tojson }};
+        let currentCameraId = 0;
+        
+        // Carica configurazione AI
+        async function loadAiConfig() {
+            try {
+                const response = await fetch('/api/ai-config');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const config = data.config;
+                    document.getElementById('aiGlobalEnabled').checked = config.global_enabled;
+                    document.getElementById('modelPath').value = config.model_path;
+                    document.getElementById('detectionInterval').value = config.detection_interval;
+                    document.getElementById('maxConcurrentCameras').value = config.max_concurrent_cameras;
+                    document.getElementById('globalSaveImages').checked = config.save_images !== false;
+                    document.getElementById('globalSavePath').value = config.save_path || '/var/lib/ssh_monitor/snapshots';
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento configurazione AI:', error);
+            }
+        }
+        
+        // Salva configurazione AI
+        async function saveAiConfig() {
+            const config = {
+                global_enabled: document.getElementById('aiGlobalEnabled').checked,
+                model_path: document.getElementById('modelPath').value,
+                detection_interval: parseFloat(document.getElementById('detectionInterval').value),
+                max_concurrent_cameras: parseInt(document.getElementById('maxConcurrentCameras').value),
+                save_images: document.getElementById('globalSaveImages').checked,
+                save_path: document.getElementById('globalSavePath').value,
+                snapshot_quality: 85
+            };
+            
+            try {
+                const response = await fetch('/api/ai-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ config: config })
+                });
+                
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'danger');
+                
+                if (data.success) {
+                    updateDetectionStatus();
+                }
+            } catch (error) {
+                showMessage(window.translations.monitoring.excluded_ips.communication_error, 'danger');
+                console.error('Errore:', error);
+            }
+        }
+        
+        // Carica configurazione telecamere
+        async function loadCameras() {
+            try {
+                const response = await fetch('/api/cameras');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayCameras(data.cameras);
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento telecamere:', error);
+            }
+        }
+        
+        // Mostra telecamere nella UI
+        function displayCameras(cameras) {
+            const container = document.getElementById('camerasContainer');
+            container.innerHTML = '';
+            
+            if (Object.keys(cameras).length === 0) {
+                container.innerHTML = '<div class="alert alert-info">Nessuna telecamera configurata. Clicca "Aggiungi Telecamera" per iniziare.</div>';
+                currentCameraId = 0; // Reset counter se non ci sono telecamere
+                return;
+            }
+            
+            // Aggiorna currentCameraId basandosi sulle telecamere esistenti
+            let maxId = 0;
+            for (const cameraId of Object.keys(cameras)) {
+                if (cameraId.startsWith('camera_')) {
+                    const id = parseInt(cameraId.replace('camera_', ''));
+                    if (!isNaN(id) && id > maxId) {
+                        maxId = id;
+                    }
+                }
+            }
+            currentCameraId = maxId;
+            
+            for (const [cameraId, camera] of Object.entries(cameras)) {
+                const cameraCard = createCameraCard(cameraId, camera);
+                container.appendChild(cameraCard);
+            }
+        }
+        
+        // Crea card per telecamera
+        function createCameraCard(cameraId, camera) {
+            // Verifica che le traduzioni siano disponibili
+            if (!window.translations || !window.translations.video_analysis || !window.translations.video_analysis.cameras) {
+                console.error('Traduzioni non disponibili per createCameraCard');
+                return document.createElement('div'); // Ritorna un div vuoto
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'card mb-3';
+            div.innerHTML = `
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6><i class="bi bi-camera-video"></i> ${camera.name || 'Camera ' + cameraId}</h6>
+                        <div>
+                            <div class="form-check form-switch d-inline-block me-3">
+                                <input class="form-check-input" type="checkbox" id="camera_enabled_${cameraId}" ${camera.enabled ? 'checked' : ''}>
+                                <label class="form-check-label" for="camera_enabled_${cameraId}">${translations.video_analysis.cameras.enabled}</label>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm me-2" type="button" data-bs-toggle="collapse" data-bs-target="#camera_settings_${cameraId}" aria-expanded="false" aria-controls="camera_settings_${cameraId}">
+                                <i class="bi bi-gear"></i> ${translations.video_analysis.cameras.settings}
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteCamera('${cameraId}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse" id="camera_settings_${cameraId}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="camera_name_${cameraId}" class="form-label">${translations.video_analysis.cameras.name}</label>
+                                    <input type="text" class="form-control" id="camera_name_${cameraId}" value="${camera.name || ''}" placeholder="${translations.video_analysis.cameras.placeholder.name}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="camera_rtsp_${cameraId}" class="form-label">${translations.video_analysis.cameras.rtsp_url}</label>
+                                    <input type="text" class="form-control" id="camera_rtsp_${cameraId}" value="${camera.rtsp_url || ''}" placeholder="${translations.video_analysis.cameras.placeholder.rtsp}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="camera_confidence_${cameraId}" class="form-label">${translations.video_analysis.cameras.confidence} (${camera.confidence_threshold || 0.5})</label>
+                                    <input type="range" class="form-range" id="camera_confidence_${cameraId}" min="0.1" max="1.0" step="0.1" value="${camera.confidence_threshold || 0.5}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="camera_iou_${cameraId}" class="form-label">${translations.video_analysis.cameras.iou_threshold} (${camera.iou_threshold || 0.3})</label>
+                                    <input type="range" class="form-range" id="camera_iou_${cameraId}" min="0.1" max="0.9" step="0.1" value="${camera.iou_threshold || 0.3}">
+                                    <small class="form-text text-muted">${translations.video_analysis.cameras.iou_threshold_description}</small>
+                                </div>
+
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">${translations.video_analysis.cameras.categories}</label>
+                                <div class="mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="camera_people_${cameraId}" ${camera.categories?.people ? 'checked' : ''}>
+                                        <label class="form-check-label" for="camera_people_${cameraId}">
+                                            ${translations.video_analysis.cameras.people}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="camera_objects_${cameraId}" ${camera.categories?.objects ? 'checked' : ''}>
+                                        <label class="form-check-label" for="camera_objects_${cameraId}">
+                                            ${translations.video_analysis.cameras.objects}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="camera_animals_${cameraId}" ${camera.categories?.animals ? 'checked' : ''}>
+                                        <label class="form-check-label" for="camera_animals_${cameraId}">
+                                            ${translations.video_analysis.cameras.animals}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-primary" onclick="saveCameraConfig('${cameraId}')">
+                                <i class="bi bi-save"></i> ${translations.video_analysis.cameras.save}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Aggiungi event listener per la soglia di confidenza
+            const rangeInput = div.querySelector(`#camera_confidence_${cameraId}`);
+            const label = div.querySelector(`label[for="camera_confidence_${cameraId}"]`);
+            rangeInput.addEventListener('input', function() {
+                label.textContent = `${translations.video_analysis.cameras.confidence} (${this.value})`;
+            });
+            
+            // Aggiungi event listener per la soglia IoU
+            const iouRangeInput = div.querySelector(`#camera_iou_${cameraId}`);
+            const iouLabel = div.querySelector(`label[for="camera_iou_${cameraId}"]`);
+            iouRangeInput.addEventListener('input', function() {
+                iouLabel.textContent = `${translations.video_analysis.cameras.iou_threshold} (${this.value})`;
+            });
+            
+            return div;
+        }
+        
+        // Aggiungi nuova telecamera
+        function addNewCamera() {
+            // Verifica che le traduzioni siano disponibili
+            if (!window.translations || !window.translations.video_analysis || !window.translations.video_analysis.cameras) {
+                console.error('Traduzioni non disponibili per addNewCamera');
+                alert('Errore: traduzioni non caricate. Ricarica la pagina.');
+                return;
+            }
+            
+            currentCameraId++;
+            const newCameraId = 'camera_' + currentCameraId;
+            
+            // Verifica che l'ID non esista già
+            let finalCameraId = newCameraId;
+            let attempts = 0;
+            while (document.getElementById(`camera_name_${finalCameraId}`) && attempts < 100) {
+                currentCameraId++;
+                finalCameraId = 'camera_' + currentCameraId;
+                attempts++;
+            }
+            
+            const newCamera = {
+                name: '',
+                rtsp_url: '',
+                enabled: false,
+                confidence_threshold: 0.5,
+                iou_threshold: 0.3,
+                categories: {
+                    people: false,
+                    objects: false,
+                    animals: false
+                }
+            };
+            
+            const container = document.getElementById('camerasContainer');
+            if (container.querySelector('.alert-info')) {
+                container.innerHTML = '';
+            }
+            
+            const cameraCard = createCameraCard(finalCameraId, newCamera);
+            container.appendChild(cameraCard);
+            
+            console.log('Aggiunta nuova telecamera con ID:', finalCameraId);
+        }
+        
+        // Salva configurazione telecamera
+        async function saveCameraConfig(cameraId) {
+            const camera = {
+                name: document.getElementById(`camera_name_${cameraId}`).value,
+                rtsp_url: document.getElementById(`camera_rtsp_${cameraId}`).value,
+                enabled: document.getElementById(`camera_enabled_${cameraId}`).checked,
+                confidence_threshold: parseFloat(document.getElementById(`camera_confidence_${cameraId}`).value),
+                iou_threshold: parseFloat(document.getElementById(`camera_iou_${cameraId}`).value),
+                categories: {
+                    people: document.getElementById(`camera_people_${cameraId}`).checked,
+                    objects: document.getElementById(`camera_objects_${cameraId}`).checked,
+                    animals: document.getElementById(`camera_animals_${cameraId}`).checked
+                }
+            };
+            
+            console.log('Salvataggio telecamera:', cameraId, camera);
+            
+            try {
+                // Carica tutte le telecamere esistenti
+                const response = await fetch('/api/cameras');
+                const data = await response.json();
+                
+                let cameras = {};
+                if (data.success) {
+                    cameras = data.cameras;
+                }
+                
+                console.log('Telecamere esistenti:', cameras);
+                
+                // Aggiorna la telecamera corrente
+                cameras[cameraId] = camera;
+                
+                console.log('Telecamere da salvare:', cameras);
+                
+                // Salva tutte le telecamere
+                const saveResponse = await fetch('/api/cameras', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cameras: cameras })
+                });
+                
+                const saveData = await saveResponse.json();
+                console.log('Risposta salvataggio:', saveData);
+                
+                showMessage(saveData.message, saveData.success ? 'success' : 'danger');
+                
+                if (saveData.success) {
+                    updateDetectionStatus();
+                }
+            } catch (error) {
+                showMessage(window.translations.monitoring.excluded_ips.communication_error, 'danger');
+                console.error('Errore:', error);
+            }
+        }
+        
+        // Elimina telecamera
+        async function deleteCamera(cameraId) {
+            if (!confirm('Sei sicuro di voler eliminare questa telecamera?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/cameras/${cameraId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'danger');
+                
+                if (data.success) {
+                    loadCameras(); // Ricarica la lista
+                    updateDetectionStatus();
+                }
+            } catch (error) {
+                showMessage(window.translations.monitoring.excluded_ips.communication_error, 'danger');
+                console.error('Errore:', error);
+            }
+        }
+        
+        // Controlla detection
+        async function controlDetection(action) {
+            try {
+                const response = await fetch('/api/detection-control', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: action })
+                });
+                
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'danger');
+                
+                // Aggiorna stato dopo qualche secondo
+                setTimeout(updateDetectionStatus, 2000);
+            } catch (error) {
+                showMessage(window.translations.monitoring.excluded_ips.communication_error, 'danger');
+                console.error('Errore:', error);
+            }
+        }
+        
+        // Aggiorna stato detection
+        async function updateDetectionStatus() {
+            try {
+                const response = await fetch('/api/detection-status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const status = data.status;
+                    const statusDiv = document.getElementById('detectionStatusDisplay');
+                    
+                    let statusText = `AI Abilitata: ${status.ai_enabled ? '✅' : '❌'}<br>`;
+                    statusText += `Telecamere Totali: ${status.total_cameras}<br>`;
+                    statusText += `Telecamere Attive: ${status.active_cameras.filter(c => c.running).length}`;
+                    
+                    statusDiv.innerHTML = statusText;
+                    statusDiv.className = `alert ${status.ai_enabled && status.total_cameras > 0 ? 'alert-success' : 'alert-warning'}`;
+                }
+            } catch (error) {
+                console.error('Errore nell\'aggiornamento stato:', error);
+            }
+        }
+        
+        // Event listeners per AI Detection
+        document.addEventListener('DOMContentLoaded', function() {
+            // Carica sempre gli IP esclusi
+            loadExcludedIps();
+            
+            if (window.aiDetectionEnabled) {
+                // Carica configurazioni iniziali
+                loadAiConfig();
+                loadCameras();
+                updateDetectionStatus();
+                
+                // Event listeners per i pulsanti
+                document.getElementById('saveAiConfig').addEventListener('click', saveAiConfig);
+                document.getElementById('addNewCamera').addEventListener('click', addNewCamera);
+                document.getElementById('startDetection').addEventListener('click', () => controlDetection('start'));
+                document.getElementById('restartDetection').addEventListener('click', () => controlDetection('restart'));
+                document.getElementById('stopDetection').addEventListener('click', () => controlDetection('stop'));
+                document.getElementById('detectionStatus').addEventListener('click', updateDetectionStatus);
+                
+                // Aggiorna stato ogni 30 secondi
+                setInterval(updateDetectionStatus, 30000);
+            }
+        });
+        {% endif %}
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
