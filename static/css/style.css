@@ -467,3 +467,208 @@ html {
     background-color: #2d2d2d !important;
     color: #e0e0e0;
 }
+
+/* ========== STILI PER I GRAFICI STORICI ========== */
+
+/* Icone dei grafici */
+.chart-icon {
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #6c757d;
+    transition: all 0.3s ease;
+    margin-left: 0.5rem;
+    padding: 0.25rem;
+    border-radius: 4px;
+}
+
+.chart-icon:hover {
+    color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: scale(1.1);
+}
+
+/* Modal per i grafici */
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 400px;
+}
+
+.chart-container canvas {
+    max-height: 400px;
+}
+
+/* Statistiche del grafico */
+.chart-stats .card {
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.chart-stats .card:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transform: translateY(-1px);
+}
+
+.chart-stats .card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.chart-stats h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Controlli del grafico */
+.chart-controls {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.chart-controls .form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.chart-controls .form-select {
+    border-radius: 6px;
+}
+
+.chart-controls .btn {
+    border-radius: 6px;
+}
+
+/* Auto-refresh switch */
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+/* Responsive per i grafici */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;
+    }
+    
+    .chart-stats .col-md-3 {
+        margin-bottom: 1rem;
+    }
+    
+    .chart-controls .col-md-6 {
+        margin-bottom: 1rem;
+    }
+}
+
+/* ========== TEMA DARK PER I GRAFICI ========== */
+
+[data-theme="dark"] .chart-icon {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .chart-icon:hover {
+    color: #6ea8fe;
+    background-color: rgba(110, 168, 254, 0.1);
+}
+
+[data-theme="dark"] .chart-controls {
+    background: #2d2d2d;
+    border: 1px solid #444;
+}
+
+[data-theme="dark"] .chart-stats .card {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .chart-stats .card:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(255, 255, 255, 0.075);
+}
+
+[data-theme="dark"] .chart-stats .card-title {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .chart-stats h4 {
+    color: #e0e0e0;
+}
+
+/* Modal nel tema dark */
+[data-theme="dark"] .modal-content {
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+[data-theme="dark"] .modal-header {
+    background-color: #2d2d2d;
+    border-bottom-color: #333;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .modal-body {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Loading spinner per i grafici */
+.chart-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.chart-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Animazione per le icone dei grafici */
+@keyframes chartIconPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.chart-icon.active {
+    animation: chartIconPulse 2s infinite;
+    color: #0d6efd;
+}
+
+/* Tooltip per le icone dei grafici */
+.chart-icon[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 0.25rem;
+}
+
+[data-theme="dark"] .chart-icon[title]:hover::after {
+    background: rgba(255, 255, 255, 0.9);
+    color: #000;
+}
