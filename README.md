@@ -1,5 +1,5 @@
 ## 🟢⚪🔴 *Per la versione italiana, clicca qui:* [README Italiano](README.it.md) 
-## New 2.0 Version - Branch 2.0 ##
+## [New 2.0 Version - Branch 2.0](https://github.com/savergiggio/Server-Monitoring-Telegram-Bot-System/releases/tag/2.1) ##
 ## 📚 Index  
 - 🖥️ [Telegram Server Monitor – Overview](#️-telegram-server-monitor)  
 - 🌐 [Web GUI Features](#-web-gui-features)  
